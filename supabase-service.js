@@ -37,7 +37,7 @@ export const backend = {
   async read() {
     const [dashboard, directory, teamNames] = await Promise.all([
       client.from("luna_dashboard").select("scores,history,event_number,revision").eq("id", 1).single(),
-      client.from("luna_streamers").select("id,name,team_id").order("created_at"),
+      client.from("luna_streamers").select("id,name,team_id,game_nickname,profile_url,tier").order("created_at"),
       client.from("luna_teams").select("id,name")
     ]);
     if (dashboard.error || directory.error || teamNames.error) throw new Error("경기 기록과 명단을 불러오지 못했습니다.");
@@ -49,10 +49,11 @@ export const backend = {
     const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });
     if (error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 창을 닫았다가 다시 열어 주세요." : "팀 이름을 저장하지 못했습니다. 중복 이름과 관리자 권한을 확인해 주세요.");
   },
-  async saveStreamer(id, name, teamId) {
+  async saveStreamer(id, name, teamId, profile = {}) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
-    const query = id ? client.from("luna_streamers").update({ team_id: teamId || null }).eq("id", id)
-      : client.from("luna_streamers").insert({ name: name.trim(), team_id: teamId || null });
+    const fields = { team_id: teamId || null, game_nickname: profile.gameNickname?.trim() || "", profile_url: profile.profileUrl?.trim() || "", tier: profile.tier || "" };
+    const query = id ? client.from("luna_streamers").update(fields).eq("id", id)
+      : client.from("luna_streamers").insert({ name: name.trim(), ...fields });
     const { error } = await query;
     if (error) throw new Error(error.code === "23505" ? "이미 등록된 이름입니다." : "등록을 저장하지 못했습니다. 관리자 권한과 연결을 확인해 주세요.");
   },

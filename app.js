@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=teams-4";
+import { backend } from "./supabase-service.js?v=profiles-5";
 (() => {
   "use strict";
 
@@ -120,7 +120,7 @@ import { backend } from "./supabase-service.js?v=teams-4";
   }
 
   function getIndividualRecords() {
-    const recordMap = new Map(state.streamers.map((streamer) => [streamer.name, { id: streamer.id, name: streamer.name, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 }]));
+    const recordMap = new Map(state.streamers.map((streamer) => [streamer.name, { ...streamer, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 }]));
     state.history.forEach((event) => {
       event.standings.forEach((teamResult) => {
         teamResult.members.forEach((name) => {
@@ -216,22 +216,28 @@ import { backend } from "./supabase-service.js?v=teams-4";
     if (selectedPlayer !== null && $("#player-dialog").open) renderPlayerDetail();
   }
 
+  function safeProfileUrl(value) {
+    try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
+  }
+
   function renderLeaderboard(records = getIndividualRecords()) {
-    const normalize = (text) => text.normalize("NFKC").toLocaleLowerCase("ko").replace(/\s/g, "");
-    const query = normalize($("#leaderboard-search").value);
-    const teamId = $("#leaderboard-team").value;
-    let rank = 0;
-    const ranked = [...records].sort((a, b) => b.wins - a.wins || b.topThree - a.topThree || (a.averageRank ?? 99) - (b.averageRank ?? 99) || b.appearances - a.appearances || a.name.localeCompare(b.name))
-      .map((record) => ({ ...record, rank: record.appearances ? ++rank : null, team: teams.find((team) => team.members.includes(record.name)) }));
-    const filtered = ranked.filter((record) => normalize(record.name).includes(query) && (!teamId || record.team?.id === teamId));
-    $("#leaderboard-count").textContent = `${filtered.length}명 / 전체 ${records.length}명 · 확정된 대회 전적 기준`;
-    const columns = backend.isAdmin ? 8 : 7;
-    const row = (record) => `<tr><td class="rank-cell ${record.rank && record.rank <= 3 ? "is-top" : ""}">${record.rank ? String(record.rank).padStart(2, "0") : "—"}</td><td><button class="player-link" type="button" data-player="${escapeHtml(record.name)}">${escapeHtml(record.name)}</button></td><td>${escapeHtml(record.team?.name ?? "미배정")}</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.appearances}회</td><td>${record.averageRank !== null ? `${record.averageRank.toFixed(2)}위` : "—"}</td>${backend.isAdmin ? `<td class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">팀 변경</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></td>` : ""}</tr>`;
-    $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<tr><td colspan="${columns}">${records.length ? "검색 결과가 없습니다. 이름이나 팀을 다시 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</td></tr>`
-      : $("#leaderboard-group").checked ? [...teams, { id: "", name: "미배정" }].map((team) => {
-        const members = filtered.filter((record) => (record.team?.id ?? "") === team.id);
-        return members.length ? `<tr class="team-group-row"><th colspan="${columns}" scope="rowgroup">${escapeHtml(team.name)} · ${members.length}명</th></tr>${members.map(row).join("")}` : "";
-      }).join("") : filtered.map(row).join("");
+    const normalize = (text) => String(text ?? "").normalize("NFKC").toLocaleLowerCase("ko").replace(/\s/g, "");
+    const query = normalize($("#leaderboard-search").value), teamId = $("#leaderboard-team").value;
+    const tierOrder = ["SSS", "SS", "S", "A", "B", "C", "D", "F", "닭", "나뭇가지", ""];
+    const mode = $("#leaderboard-sort").value || "tier";
+    const sorted = [...records].sort((a,b) => mode === "name" ? a.name.localeCompare(b.name, "ko") : mode === "records" ? b.wins-a.wins || b.topThree-a.topThree || (a.averageRank ?? 99)-(b.averageRank ?? 99) || a.name.localeCompare(b.name, "ko") : tierOrder.indexOf(a.tier || "")-tierOrder.indexOf(b.tier || "") || a.name.localeCompare(b.name, "ko"));
+    const filtered = sorted.map(record => ({...record, team: teams.find(team => team.id === record.team_id)})).filter(record => (normalize(record.name).includes(query) || normalize(record.game_nickname).includes(query)) && (!teamId || record.team?.id === teamId));
+    $("#leaderboard-count").textContent = `${filtered.length}명 / 전체 ${records.length}명`;
+    const card = record => {
+      const profile = safeProfileUrl(record.profile_url);
+      const image = profile ? `<img class="streamer-avatar" src="${escapeHtml(profile)}" alt="${escapeHtml(record.name)} 프로필" loading="lazy" referrerpolicy="no-referrer">` : "";
+      return `<article class="streamer-card"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">게임 닉네임 · ${escapeHtml(record.game_nickname || "미등록")}</p><p class="streamer-team">${escapeHtml(record.team?.name ?? "미배정")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}<button class="player-link" type="button" data-player="${escapeHtml(record.name)}">루나섬 전적</button></div>${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
+    };
+    const group = (label, members) => members.length ? `<h2 class="streamer-divider">${escapeHtml(label)} · ${members.length}명</h2>${members.map(card).join("")}` : "";
+    $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<div class="streamer-empty">${records.length ? "검색 결과가 없습니다. 스트리머 이름이나 게임 닉네임을 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</div>`
+      : $("#leaderboard-group").checked ? [...teams, {id:"",name:"미배정"}].map(team => group(team.name, filtered.filter(record => (record.team?.id ?? "") === team.id))).join("")
+      : mode === "tier" ? tierOrder.map(tier => group(tier ? tier + " TIER" : "티어 미등록", filtered.filter(record => (record.tier || "") === tier))).join("") : filtered.map(card).join("");
+    $$(".streamer-avatar").forEach(image => image.addEventListener("error", () => { image.hidden = true; }));
   }
 
   function renderPlayerDetail() {
@@ -263,6 +269,9 @@ import { backend } from "./supabase-service.js?v=teams-4";
   }
 
   function showPage(page) {
+    const standalone = location.pathname.endsWith("/streamers.html");
+    if (page === "leaderboard" && !standalone) { location.href = "streamers.html"; return; }
+    if (standalone && page !== "leaderboard") { location.href = `index.html#${page}`; return; }
     $$(".page").forEach((section) => section.classList.toggle("is-visible", section.dataset.view === page));
     $$(".nav-link").forEach((button) => button.classList.toggle("is-active", button.dataset.page === page));
     history.replaceState(null, "", `#${page}`);
@@ -341,9 +350,12 @@ import { backend } from "./supabase-service.js?v=teams-4";
       if (!backend.isAdmin || !connected || busy) return;
       const streamer = state.streamers.find((streamer) => streamer.id === id);
       editingStreamer = streamer?.id ?? null;
-      $("#registration-title").textContent = streamer ? "참가 팀 변경" : "스트리머 등록";
+      $("#registration-title").textContent = streamer ? "스트리머 프로필 수정" : "스트리머 등록";
       $("#registration-name").value = streamer?.name ?? "";
       $("#registration-name").readOnly = !!streamer;
+      $("#registration-nickname").value = streamer?.game_nickname ?? "";
+      $("#registration-profile").value = streamer?.profile_url ?? "";
+      $("#registration-tier").value = streamer?.tier ?? "";
       $("#registration-team").value = streamer?.team_id ?? "";
       $("#registration-feedback").textContent = "";
       $("#registration-dialog").showModal();
@@ -357,7 +369,9 @@ import { backend } from "./supabase-service.js?v=teams-4";
       if (!backend.isAdmin || !connected || busy) return;
       busy = true; renderAuth();
       try {
-        await backend.saveStreamer(editingStreamer, name, $("#registration-team").value);
+        const profileUrl = $("#registration-profile").value.trim();
+        if (profileUrl && !safeProfileUrl(profileUrl)) throw new Error("프로필 이미지 주소는 https://로 시작하는 주소를 입력해 주세요.");
+        await backend.saveStreamer(editingStreamer, name, $("#registration-team").value, {gameNickname: $("#registration-nickname").value, profileUrl, tier: $("#registration-tier").value});
         $("#registration-dialog").close();
         $("#directory-feedback").textContent = `${name} 명단을 저장했습니다.`;
       } catch (error) { $("#registration-feedback").textContent = error.message; }
@@ -378,6 +392,7 @@ import { backend } from "./supabase-service.js?v=teams-4";
     $("#leaderboard-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
     $("#leaderboard-search").addEventListener("input", () => renderLeaderboard());
     $("#leaderboard-team").addEventListener("change", () => renderLeaderboard());
+    $("#leaderboard-sort").addEventListener("change", () => renderLeaderboard());
     $("#leaderboard-group").addEventListener("change", () => renderLeaderboard());
     $("#streamer-leaderboard-body").addEventListener("click", (event) => {
       const button = event.target.closest("[data-player]");
@@ -424,7 +439,7 @@ import { backend } from "./supabase-service.js?v=teams-4";
     updateClock();
     setInterval(updateClock, 1000);
     renderAll();
-    const initialPage = location.hash.slice(1);
+    const initialPage = location.pathname.endsWith("/streamers.html") ? "leaderboard" : location.hash.slice(1);
     if (["dashboard", "champions", "personal", "leaderboard"].includes(initialPage)) showPage(initialPage);
     backend.init(() => { renderAll(); }).then(async () => {
       await refresh();

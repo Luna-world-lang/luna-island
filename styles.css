@@ -192,3 +192,27 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #team-names-fields label { display:grid; gap:8px; font-size:14px; }
 #team-names-fields input { width:100%; padding:12px; border:1px solid #403863; border-radius:8px; background:#090b22; color:#f1f0ff; font:inherit; font-size:16px; }
 @media(max-width:600px) { #team-names-fields { grid-template-columns:1fr; } }
+/* Streamer directory */
+.leaderboard-controls .team-filter { white-space:nowrap; flex-shrink:0; }
+.leaderboard-controls .search-box { min-width:240px; }
+.streamer-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+.streamer-card { position:relative; display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:24px; background:linear-gradient(135deg,#171a36,#101329); border:1px solid #303451; border-radius:18px; }
+.streamer-profile { position:relative; width:72px; height:72px; flex-shrink:0; border-radius:50%; overflow:hidden; background:#343052; }
+.avatar-fallback { display:grid; place-items:center; width:100%; height:100%; font-size:28px; color:#d1baff; }
+.streamer-avatar { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.streamer-avatar[hidden] { display:none; }
+.streamer-info { min-width:0; flex:1; }
+.streamer-title { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.streamer-title h2 { font-size:19px; margin:0; overflow-wrap:anywhere; }
+.tier-badge { font-size:11px; padding:4px 8px; border-radius:6px; background:#423362; color:#dabdff; }
+.game-nickname,.streamer-team { font-size:12px; color:#a9aecb; margin:8px 0 0; overflow-wrap:anywhere; }
+.streamer-card-actions { width:100%; border-top:1px solid #2b2f49; padding-top:16px; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.record-search { text-decoration:none; color:#c8a9ff; font-weight:700; font-size:14px; }
+.record-search:hover { color:#fff; }
+.record-unavailable { color:#888eab; font-size:12px; }
+.streamer-divider { grid-column:1/-1; margin:14px 0 0; font-size:15px; color:#c5c9e0; border-bottom:1px solid #303451; padding-bottom:12px; }
+.streamer-empty { grid-column:1/-1; text-align:center; padding:60px 24px; color:#a9aecb; border:1px dashed #303451; border-radius:16px; }
+.streamer-card .directory-actions { width:100%; justify-content:flex-end; }
+#registration-dialog { max-height:90vh; overflow:auto; }
+@media(max-width:1100px) { .streamer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .streamer-grid { grid-template-columns:1fr; } .streamer-card { padding:20px; } }
