@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=reference-8";
+import { backend } from "./supabase-service.js?v=constellation-9";
 (() => {
   "use strict";
 

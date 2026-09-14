@@ -292,3 +292,36 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .directory-page .streamer-empty { border-color:#333; color:#888; }
 @media(max-width:1250px) { .directory-page .streamer-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .directory-page .page-heading { padding-right:0; margin-bottom:90px; } .directory-page .leaderboard-controls { position:relative; top:auto; margin:-65px 0 50px; justify-content:flex-end; } }
 @media(max-width:800px) { .directory-page .site-header { position:static; width:100%; padding:15px; } .directory-page .brand { padding-bottom:10px; } .directory-page .main-nav { margin-top:10px; flex-direction:row; flex-wrap:wrap; gap:0; } .directory-page .nav-link { padding:9px; } .directory-page #admin-login,.directory-page #admin-logout { margin:8px 0 0; padding:8px; border-top:0; } .directory-page .app-shell { margin:0; width:100%; padding:25px 20px; } .directory-page .streamer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .directory-page .leaderboard-controls { justify-content:flex-start; flex-wrap:wrap; } .directory-page .leaderboard-controls .search-box { width:100%; flex-basis:100%; } .directory-page #register-streamer { position:static; } .directory-page .page-heading h1 { font-size:26px; } }
+
+/* Luna constellation theme, with the reference leaderboard layout */
+.directory-page { --luna-star:#bca4ef; background:radial-gradient(ellipse at 85% 5%,#182139 0,transparent 48%),radial-gradient(ellipse at 22% 65%,#19132b 0,transparent 42%),#080c18; color:#e9edf8; }
+.directory-page .stars { display:block; opacity:.4; mask-image:none; background-image:radial-gradient(circle,#e2ddff 1px,transparent 1.5px),radial-gradient(circle,#8cb6e8 1px,transparent 1.5px); background-size:101px 101px,173px 173px; background-position:17px 31px,63px 89px; }
+.directory-page .site-header { background:rgba(12,16,30,.96); border-color:#2a3047; }
+.directory-page .brand { color:#d1c2f7; border-color:#2a3047; }
+.directory-page .brand-moon { color:#d1c2f7; text-shadow:0 0 18px #9374d6; }
+.directory-page .nav-link { color:#9aa5bf; }
+.directory-page .nav-link.is-active { background:#24223c; color:#d2c2f9; border-left-color:#b99beb; }
+.directory-page .nav-link:hover { color:#eee7ff; background:#1b2035; }
+.directory-page .page-heading h1 { border-left-color:#b99beb; color:#ede7fc; }
+.directory-page .page-heading p { color:#94a1bd; }
+.directory-page .directory-sort { background:#11172a; border-color:#303951; }
+.directory-page .directory-sort button { color:#97a3bd; }
+.directory-page .directory-sort button[aria-pressed=true] { background:#baa3e7; color:#171328; }
+.directory-page .leaderboard-controls .search-box { background:#11172a; border-color:#303951; }
+.directory-page #register-streamer { background:#baa3e7; color:#171328; }
+.directory-page .streamer-divider { color:#c6b2ee; }
+.directory-page .streamer-divider::before { content:'✦'; font-size:20px; color:#d1c2f7; text-shadow:0 0 12px #8e77bc; }
+.directory-page .streamer-divider::after { background:linear-gradient(90deg,#423f62,#253047,transparent); }
+.directory-page .streamer-card { background:linear-gradient(145deg,rgba(28,32,53,.96),rgba(15,21,37,.97)); border-color:#333d55; box-shadow:0 6px 22px #03050c55; }
+.directory-page .streamer-card::before { content:''; position:absolute; left:12px; top:13px; width:44px; height:39px; pointer-events:none; opacity:.35; background:radial-gradient(circle at 10% 10%,#dbcafa 1.5px,transparent 2px),radial-gradient(circle at 52% 36%,#dbcafa 1.5px,transparent 2px),radial-gradient(circle at 90% 5%,#dbcafa 1.5px,transparent 2px),linear-gradient(33deg,transparent 46%,#76659a 47%,#76659a 48%,transparent 49%); }
+.directory-page .streamer-card:hover { border-color:#b99beb; box-shadow:0 0 24px #9c81d022; }
+.directory-page .streamer-profile { border-color:#6b638e; background:#252c43; box-shadow:0 0 16px #a086d52b; }
+.directory-page .avatar-fallback { color:#cfbef5; }
+.directory-page .game-nickname { background:#0c1222; border-color:#343a53; color:#a2acc3; }
+.directory-page .record-search { color:#cab7ef; opacity:.85; }
+.directory-page .record-search:hover,.directory-page .record-search:focus-visible { background:linear-gradient(transparent 72%,#30233f); }
+.directory-page .streamer-card .directory-actions { border-color:#303951; }
+.directory-page .streamer-empty { border-color:#333d55; color:#a2acc3; background:#10162a77; }
+.directory-page #admin-login,.directory-page #admin-logout { border-color:#2a3047; color:#a8cbe9; }
+.directory-page .stars::after { content:''; position:absolute; inset:0 0 0 260px; opacity:.45; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700' viewBox='0 0 900 700'%3E%3Cg fill='none' stroke='%238b8cb3' stroke-width='1' opacity='.45'%3E%3Cpath d='M530 90L610 140L690 105L750 200L700 290L610 250L530 90M110 390L180 450L250 420L290 510L220 580'/%3E%3C/g%3E%3Cg fill='%23d4d2f2'%3E%3Ccircle cx='530' cy='90' r='2'/%3E%3Ccircle cx='610' cy='140' r='2.5'/%3E%3Ccircle cx='690' cy='105' r='2'/%3E%3Ccircle cx='750' cy='200' r='3'/%3E%3Ccircle cx='700' cy='290' r='2'/%3E%3Ccircle cx='610' cy='250' r='2'/%3E%3Ccircle cx='110' cy='390' r='2'/%3E%3Ccircle cx='180' cy='450' r='2.5'/%3E%3Ccircle cx='250' cy='420' r='2'/%3E%3Ccircle cx='290' cy='510' r='2'/%3E%3Ccircle cx='220' cy='580' r='2.5'/%3E%3C/g%3E%3C/svg%3E"); background-size:900px 700px; background-repeat:repeat; }
+@media(max-width:800px) { .directory-page .stars::after { left:0; } }
