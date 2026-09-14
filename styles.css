@@ -161,3 +161,20 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #login-form { display: grid; gap: 16px; }
 #login-form label { display: grid; gap: 8px; font-size: 14px; }
 #login-form input { width: 100%; padding: 12px; border: 1px solid #403863; border-radius: 8px; background: #090b22; color: #f1f0ff; font: inherit; font-size: 16px; }
+.leaderboard-controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:12px; }
+.leaderboard-controls .search-box { flex:1; min-width:220px; margin:0; }
+.team-filter { display:flex; align-items:center; gap:10px; font-size:14px; }
+.team-filter select { padding:12px; background:#12132b; color:#f1f0ff; border:1px solid #403863; border-radius:10px; font:inherit; }
+.group-toggle { display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; }
+.group-toggle input { width:18px; height:18px; accent-color:#a78bfa; }
+.player-link { padding:6px 0; background:none; border:0; color:#b5a2ff; font:inherit; font-weight:700; cursor:pointer; text-align:left; }
+.player-link:hover { text-decoration:underline; }
+.team-group-row th { background:#20203d; color:#d8ccff; text-align:left; font-size:16px; }
+#player-dialog { width:min(900px,calc(100% - 32px)); max-height:85vh; padding:24px; border:1px solid #403863; border-radius:18px; background:#12132b; color:#f1f0ff; }
+#player-dialog::backdrop { background:rgb(3 4 15 / 75%); }
+#player-detail h3 { margin-top:24px; margin-bottom:12px; }
+.player-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:20px 0; }
+.player-stats div { padding:16px; background:#090b22; border-radius:12px; }
+.player-stats span { display:block; font-size:14px; color:#b3b3cb; }
+.player-stats strong { display:block; font-size:22px; margin-top:8px; }
+@media(max-width:600px) { .player-stats { grid-template-columns:repeat(2,1fr); } .leaderboard-controls .search-box { flex-basis:100%; } }

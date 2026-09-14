@@ -97,8 +97,15 @@
 
     <section class="page" id="page-leaderboard" data-view="leaderboard">
       <div class="page-heading"><p class="eyebrow">STREAMER LEADERBOARD</p><h1>스트리머 리더보드</h1><p>우승 횟수, TOP 3 진입, 평균 순위를 종합해 정렬합니다.</p></div>
+      <div class="leaderboard-controls">
+        <label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">리더보드 스트리머 검색</span><input id="leaderboard-search" type="search" placeholder="스트리머 이름 검색" autocomplete="off"></label>
+        <label class="team-filter">팀<select id="leaderboard-team"><option value="">전체 팀</option></select></label>
+        <label class="group-toggle"><input id="leaderboard-group" type="checkbox">팀별로 보기</label>
+      </div>
+      <p id="leaderboard-count" class="drawer-help" role="status"></p>
+      <p class="drawer-help">이름을 선택하면 루나섬 대회 전적과 현재 경기 점수를 확인할 수 있습니다.</p>
       <div class="table-wrap leaderboard-table">
-        <table><thead><tr><th>순위</th><th>스트리머</th><th>우승</th><th>TOP 3</th><th>출전</th><th>평균 순위</th></tr></thead><tbody id="streamer-leaderboard-body"></tbody></table>
+        <table><thead><tr><th>전체 순위</th><th>스트리머</th><th>현재 팀</th><th>우승</th><th>TOP 3</th><th>출전</th><th>평균 순위</th></tr></thead><tbody id="streamer-leaderboard-body"></tbody></table>
       </div>
     </section>
   </main>
@@ -147,6 +154,10 @@
       <button class="primary-button" type="submit">로그인</button>
       <p id="login-feedback" class="form-feedback" role="status"></p>
     </form>
+  </dialog>
+  <dialog id="player-dialog" aria-labelledby="player-title">
+    <div class="drawer-header"><h2 id="player-title">스트리머 전적</h2><button class="icon-button" id="close-player" type="button" aria-label="전적 닫기">×</button></div>
+    <div id="player-detail"></div>
   </dialog>
   <script src="supabase-config.js"></script>
   <script type="module" src="app.js"></script>

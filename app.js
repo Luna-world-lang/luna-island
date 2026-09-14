@@ -18,6 +18,7 @@ import { backend } from "./supabase-service.js";
   let state = loadState();
   let busy = false;
   let connected = false;
+  let selectedPlayer = null;
 
   function renderAuth() {
     const admin = backend.isAdmin;
@@ -184,10 +185,37 @@ import { backend } from "./supabase-service.js";
     const filtered = records.filter((record) => record.name.toLocaleLowerCase("ko").includes(query));
     $("#personal-record-body").innerHTML = filtered.map((record) => `<tr><td class="team-name">${escapeHtml(record.name)}</td><td>${record.appearances}회</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.averageRank ? `${record.averageRank.toFixed(2)}위` : "—"}</td></tr>`).join("");
 
-    const ranked = records.filter((record) => record.appearances > 0).sort((a, b) => b.wins - a.wins || b.topThree - a.topThree || a.averageRank - b.averageRank || b.appearances - a.appearances || a.name.localeCompare(b.name));
-    $("#streamer-leaderboard-body").innerHTML = ranked.length
-      ? ranked.map((record, index) => `<tr><td class="rank-cell ${index < 3 ? "is-top" : ""}">${String(index + 1).padStart(2, "0")}</td><td class="team-name">${escapeHtml(record.name)}</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.appearances}회</td><td>${record.averageRank.toFixed(2)}위</td></tr>`).join("")
-      : `<tr><td colspan="6">확정된 대회 기록이 없습니다.</td></tr>`;
+    renderLeaderboard(records);
+    if (selectedPlayer !== null && $("#player-dialog").open) renderPlayerDetail();
+  }
+
+  function renderLeaderboard(records = getIndividualRecords()) {
+    const normalize = (text) => text.normalize("NFKC").toLocaleLowerCase("ko").replace(/\s/g, "");
+    const query = normalize($("#leaderboard-search").value);
+    const teamId = $("#leaderboard-team").value;
+    let rank = 0;
+    const ranked = [...records].sort((a, b) => b.wins - a.wins || b.topThree - a.topThree || (a.averageRank ?? 99) - (b.averageRank ?? 99) || b.appearances - a.appearances || a.name.localeCompare(b.name))
+      .map((record) => ({ ...record, rank: record.appearances ? ++rank : null, team: teams.find((team) => team.members.includes(record.name)) }));
+    const filtered = ranked.filter((record) => normalize(record.name).includes(query) && (!teamId || record.team?.id === teamId));
+    $("#leaderboard-count").textContent = `${filtered.length}명 / 전체 ${records.length}명 · 확정된 대회 전적 기준`;
+    const row = (record) => `<tr><td class="rank-cell ${record.rank && record.rank <= 3 ? "is-top" : ""}">${record.rank ? String(record.rank).padStart(2, "0") : "—"}</td><td><button class="player-link" type="button" data-player="${escapeHtml(record.name)}">${escapeHtml(record.name)}</button></td><td>${escapeHtml(record.team?.name ?? "미배정")}</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.appearances}회</td><td>${record.averageRank !== null ? `${record.averageRank.toFixed(2)}위` : "—"}</td></tr>`;
+    $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<tr><td colspan="7">검색 결과가 없습니다. 이름이나 팀을 다시 확인해 주세요.</td></tr>`
+      : $("#leaderboard-group").checked ? [...teams, { id: "", name: "미배정" }].map((team) => {
+        const members = filtered.filter((record) => (record.team?.id ?? "") === team.id);
+        return members.length ? `<tr class="team-group-row"><th colspan="7" scope="rowgroup">${escapeHtml(team.name)} · ${members.length}명</th></tr>${members.map(row).join("")}` : "";
+      }).join("") : filtered.map(row).join("");
+  }
+
+  function renderPlayerDetail() {
+    const record = getIndividualRecords().find((record) => record.name === selectedPlayer);
+    if (!record) { $("#player-dialog").close(); return; }
+    $("#player-title").textContent = `${record.name} 전적`;
+    const current = getStandings().find((team) => team.members.includes(record.name));
+    const matches = [...state.history].reverse().flatMap((event) => event.standings.filter((team) => team.members.includes(record.name)).map((team) => ({ event, team })));
+    $("#player-detail").innerHTML = `<p class="drawer-help">${escapeHtml(current?.name ?? "현재 팀 미배정")}</p>
+      <div class="player-stats"><div><span>출전</span><strong>${record.appearances}회</strong></div><div><span>우승</span><strong>${record.wins}회</strong></div><div><span>TOP 3</span><strong>${record.topThree}회</strong></div><div><span>평균 순위</span><strong>${record.averageRank !== null ? `${record.averageRank.toFixed(2)}위` : "—"}</strong></div></div>
+      <h3>현재 경기 · 제 ${state.eventNumber}회</h3><p class="drawer-help">${current ? `${current.entries}개 라운드 입력 · 팀 ${current.points}점 · 팀 ${current.kills}킬` : "현재 팀에 배정되지 않았습니다."}</p>
+      <h3>대회별 전적</h3>${matches.length ? `<div class="table-wrap"><table><thead><tr><th>대회</th><th>날짜</th><th>참가 팀</th><th>최종 순위</th><th>팀 점수</th><th>팀 킬</th></tr></thead><tbody>${matches.map(({ event, team }) => `<tr><td>제 ${Number(event.number)}회</td><td>${escapeHtml(event.date)}</td><td>${escapeHtml(team.name)}</td><td>${Number(team.rank)}위</td><td>${Number(team.points)}점</td><td>${Number(team.kills)}킬</td></tr>`).join("")}</tbody></table></div>` : `<p class="drawer-help">아직 확정된 대회 전적이 없습니다.</p>`}`;
   }
 
   function renderScorePanel() {
@@ -262,6 +290,19 @@ import { backend } from "./supabase-service.js";
   }
 
   function init() {
+    $("#leaderboard-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
+    $("#leaderboard-search").addEventListener("input", () => renderLeaderboard());
+    $("#leaderboard-team").addEventListener("change", () => renderLeaderboard());
+    $("#leaderboard-group").addEventListener("change", () => renderLeaderboard());
+    $("#streamer-leaderboard-body").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-player]");
+      if (!button) return;
+      selectedPlayer = button.dataset.player;
+      renderPlayerDetail();
+      $("#player-dialog").showModal();
+    });
+    $("#close-player").addEventListener("click", () => $("#player-dialog").close());
+    $("#player-dialog").addEventListener("close", () => { selectedPlayer = null; });
     $("#score-team").innerHTML = teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join("");
     $$(".nav-link").forEach((button) => button.addEventListener("click", () => showPage(button.dataset.page)));
     $("[data-page-link]").addEventListener("click", (event) => { event.preventDefault(); showPage("dashboard"); });
