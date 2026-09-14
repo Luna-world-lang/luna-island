@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=profiles-5";
+import { backend } from "./supabase-service.js?v=upload-6";
 (() => {
   "use strict";
 
@@ -80,7 +80,7 @@ import { backend } from "./supabase-service.js?v=profiles-5";
     const signature = JSON.stringify(teams.map((team) => [team.id, team.name]));
     if (signature === teamOptionsSignature) return;
     const options = teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join("");
-    for (const [selector, first] of [["#leaderboard-team", '<option value="">전체 팀</option>'], ["#registration-team", '<option value="">미배정</option>'], ["#score-team", ""]]) {
+    for (const [selector, first] of [["#leaderboard-team", '<option value="">전체 팀</option>'], ["#score-team", ""]]) {
       const select = $(selector), previous = select.value;
       select.innerHTML = first + options;
       if ([...select.options].some((option) => option.value === previous)) select.value = previous;
@@ -231,7 +231,7 @@ import { backend } from "./supabase-service.js?v=profiles-5";
     const card = record => {
       const profile = safeProfileUrl(record.profile_url);
       const image = profile ? `<img class="streamer-avatar" src="${escapeHtml(profile)}" alt="${escapeHtml(record.name)} 프로필" loading="lazy" referrerpolicy="no-referrer">` : "";
-      return `<article class="streamer-card"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">게임 닉네임 · ${escapeHtml(record.game_nickname || "미등록")}</p><p class="streamer-team">${escapeHtml(record.team?.name ?? "미배정")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}<button class="player-link" type="button" data-player="${escapeHtml(record.name)}">루나섬 전적</button></div>${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
+      return `<article class="streamer-card"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">게임 닉네임 · ${escapeHtml(record.game_nickname || "미등록")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}<button class="player-link" type="button" data-player="${escapeHtml(record.name)}">루나섬 전적</button></div>${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
     };
     const group = (label, members) => members.length ? `<h2 class="streamer-divider">${escapeHtml(label)} · ${members.length}명</h2>${members.map(card).join("")}` : "";
     $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<div class="streamer-empty">${records.length ? "검색 결과가 없습니다. 스트리머 이름이나 게임 닉네임을 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</div>`
@@ -345,7 +345,6 @@ import { backend } from "./supabase-service.js?v=profiles-5";
       catch (error) { $("#team-names-feedback").textContent = error.message; }
       finally { busy = false; await refresh(); }
     });
-    $("#registration-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
     const openRegistration = (id = null) => {
       if (!backend.isAdmin || !connected || busy) return;
       const streamer = state.streamers.find((streamer) => streamer.id === id);
@@ -354,13 +353,23 @@ import { backend } from "./supabase-service.js?v=profiles-5";
       $("#registration-name").value = streamer?.name ?? "";
       $("#registration-name").readOnly = !!streamer;
       $("#registration-nickname").value = streamer?.game_nickname ?? "";
-      $("#registration-profile").value = streamer?.profile_url ?? "";
+      $("#registration-profile").value = "";
+      $("#registration-preview").src = safeProfileUrl(streamer?.profile_url) || "";
+      $("#registration-preview").hidden = !safeProfileUrl(streamer?.profile_url);
       $("#registration-tier").value = streamer?.tier ?? "";
-      $("#registration-team").value = streamer?.team_id ?? "";
       $("#registration-feedback").textContent = "";
       $("#registration-dialog").showModal();
     };
     $("#register-streamer").addEventListener("click", () => openRegistration());
+    let previewUrl;
+    $("#registration-profile").addEventListener("change", () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const file = $("#registration-profile").files[0];
+      previewUrl = file ? URL.createObjectURL(file) : null;
+      $("#registration-preview").src = previewUrl || safeProfileUrl(state.streamers.find(s => s.id === editingStreamer)?.profile_url) || "";
+      $("#registration-preview").hidden = !$("#registration-preview").getAttribute("src");
+    });
+    $("#registration-dialog").addEventListener("close", () => { if (previewUrl) URL.revokeObjectURL(previewUrl); previewUrl = null; $("#registration-profile").value = ""; });
     $("#close-registration").addEventListener("click", () => $("#registration-dialog").close());
     $("#registration-form").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -369,9 +378,11 @@ import { backend } from "./supabase-service.js?v=profiles-5";
       if (!backend.isAdmin || !connected || busy) return;
       busy = true; renderAuth();
       try {
-        const profileUrl = $("#registration-profile").value.trim();
-        if (profileUrl && !safeProfileUrl(profileUrl)) throw new Error("프로필 이미지 주소는 https://로 시작하는 주소를 입력해 주세요.");
-        await backend.saveStreamer(editingStreamer, name, $("#registration-team").value, {gameNickname: $("#registration-nickname").value, profileUrl, tier: $("#registration-tier").value});
+        const existing = state.streamers.find(s => s.id === editingStreamer);
+        const file = $("#registration-profile").files[0];
+        $("#registration-feedback").textContent = file ? "이미지 업로드 중…" : "저장 중…";
+        const profileUrl = file ? await backend.uploadProfile(file) : existing?.profile_url || "";
+        await backend.saveStreamer(editingStreamer, name, existing?.team_id || null, {gameNickname: $("#registration-nickname").value, profileUrl, tier: $("#registration-tier").value});
         $("#registration-dialog").close();
         $("#directory-feedback").textContent = `${name} 명단을 저장했습니다.`;
       } catch (error) { $("#registration-feedback").textContent = error.message; }

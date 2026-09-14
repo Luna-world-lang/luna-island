@@ -7,7 +7,7 @@
   <meta name="description" content="루나섬 이터널 리턴 내전 기록과 실시간 팀 순위 대시보드">
   <title>루나섬 | 스트리머 리더보드</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23090b22'/%3E%3Cpath d='M42 11a23 23 0 1 0 10 40A25 25 0 0 1 42 11Z' fill='%23a78bfa'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=profiles-5">
+  <link rel="stylesheet" href="styles.css?v=upload-6">
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -168,10 +168,10 @@
       <div class="drawer-header"><h2 id="registration-title">스트리머 등록</h2><button class="icon-button" id="close-registration" type="button" aria-label="등록 창 닫기">×</button></div>
       <label>스트리머 이름<input id="registration-name" type="text" maxlength="60" required autocomplete="off"></label>
       <label>게임 닉네임<input id="registration-nickname" type="text" maxlength="60" autocomplete="off" placeholder="이터널 리턴 게임 닉네임"></label>
-      <label>프로필 이미지 주소<input id="registration-profile" type="url" maxlength="2000" placeholder="https://..." autocomplete="off"><small class="drawer-help">이미지 파일의 HTTPS 주소를 입력해 주세요.</small></label>
+      <label>프로필 이미지 업로드<input id="registration-profile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="drawer-help">JPG · PNG · WEBP · GIF / 최대 5MB. 새 파일을 선택하지 않으면 기존 이미지를 유지합니다.</small></label>
+      <img id="registration-preview" class="registration-preview" alt="프로필 이미지 미리보기" hidden>
       <label>티어<select id="registration-tier"><option value="">미등록</option><option>SSS</option><option>SS</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option><option>닭</option><option>나뭇가지</option></select></label>
-      <label>참가 팀<select id="registration-team"><option value="">미배정</option></select></label>
-      <p class="drawer-help">게임 닉네임·프로필·티어·팀은 나중에 수정할 수 있습니다. 스트리머 이름은 대회 전적 집계를 위해 등록 후 유지됩니다.</p>
+      <p class="drawer-help">게임 닉네임·프로필·티어는 나중에 수정할 수 있습니다. 스트리머 이름은 대회 전적 집계를 위해 등록 후 유지됩니다.</p>
       <button class="primary-button" type="submit">저장</button>
       <p id="registration-feedback" class="form-feedback" role="status"></p>
     </form>
@@ -186,6 +186,6 @@
       <p id="team-names-feedback" class="form-feedback" role="status"></p>
     </form>
   </dialog>
-  <script type="module" src="app.js?v=profiles-5"></script>
+  <script type="module" src="app.js?v=upload-6"></script>
 </body>
 </html>

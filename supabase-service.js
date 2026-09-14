@@ -57,6 +57,16 @@ export const backend = {
     const { error } = await query;
     if (error) throw new Error(error.code === "23505" ? "이미 등록된 이름입니다." : "등록을 저장하지 못했습니다. 관리자 권한과 연결을 확인해 주세요.");
   },
+  async uploadProfile(file) {
+    if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
+    const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+    if (!extensions[file?.type]) throw new Error("JPG, PNG, WEBP, GIF 이미지 파일을 선택해 주세요.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("이미지는 5MB 이하로 선택해 주세요.");
+    const path = `${config.adminUid}/${crypto.randomUUID()}.${extensions[file.type]}`;
+    const { error } = await client.storage.from("luna-profiles").upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw new Error("이미지 업로드에 실패했습니다. 파일과 관리자 로그인을 확인해 주세요.");
+    return client.storage.from("luna-profiles").getPublicUrl(path).data.publicUrl;
+  },
   async deleteStreamer(id) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const { error } = await client.from("luna_streamers").delete().eq("id", id);

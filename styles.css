@@ -193,6 +193,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #team-names-fields input { width:100%; padding:12px; border:1px solid #403863; border-radius:8px; background:#090b22; color:#f1f0ff; font:inherit; font-size:16px; }
 @media(max-width:600px) { #team-names-fields { grid-template-columns:1fr; } }
 /* Streamer directory */
+.registration-preview { width:96px; height:96px; object-fit:cover; border-radius:50%; margin:12px 0; }
+.registration-preview[hidden] { display:none; }
+#registration-profile::file-selector-button { background:#423362; color:#fff; border:0; border-radius:6px; padding:8px 12px; margin-right:10px; cursor:pointer; }
 .leaderboard-controls .team-filter { white-space:nowrap; flex-shrink:0; }
 .leaderboard-controls .search-box { min-width:240px; }
 .streamer-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
