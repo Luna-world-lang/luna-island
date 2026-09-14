@@ -178,3 +178,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .player-stats span { display:block; font-size:14px; color:#b3b3cb; }
 .player-stats strong { display:block; font-size:22px; margin-top:8px; }
 @media(max-width:600px) { .player-stats { grid-template-columns:repeat(2,1fr); } .leaderboard-controls .search-box { flex-basis:100%; } }
+#registration-dialog { width:min(440px,calc(100% - 32px)); padding:24px; border:1px solid #403863; border-radius:18px; background:#12132b; color:#f1f0ff; }
+#registration-dialog::backdrop { background:rgb(3 4 15 / 75%); }
+#registration-form { display:grid; gap:16px; }
+#registration-form label { display:grid; gap:8px; font-size:14px; }
+#registration-form input, #registration-form select { width:100%; padding:12px; border:1px solid #403863; border-radius:8px; background:#090b22; color:#f1f0ff; font:inherit; font-size:16px; }
+.directory-actions { white-space:nowrap; }
+.directory-actions button { margin:4px; padding:8px; border:1px solid #403863; border-radius:8px; background:#12132b; color:#d8ccff; font:inherit; font-size:14px; cursor:pointer; }

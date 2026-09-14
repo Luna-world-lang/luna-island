@@ -1,27 +1,34 @@
-import { backend } from "./supabase-service.js";
+import { backend } from "./supabase-service.js?v=directory-3";
 (() => {
   "use strict";
 
   const STORAGE_KEY = "luna-island-dashboard-v2";
   const teams = [
-    { id: "team-luna", name: "Team Luna", members: ["김망범", "슈에 shue", "로다 Roda"] },
-    { id: "team-stella", name: "Team Stella", members: ["Shmpyo", "레로서리", "티 엘"] },
-    { id: "team-eclipse", name: "Team Eclipse", members: ["설음동", "겜작새", "고돌조"] },
-    { id: "team-nova", name: "Team Nova", members: ["달문양", "달봄토링", "춤을추는카밀로"] },
-    { id: "team-orbit", name: "Team Orbit", members: ["은시오", "레코이rekoi", "극향"] },
-    { id: "team-comet", name: "Team Comet", members: ["치요띠띠", "츠키시로 우타하", "갱이리99"] },
-    { id: "team-aurora", name: "Team Aurora", members: ["유혀누__", "BASUTO", "범린"] },
-    { id: "team-meteor", name: "Team Meteor", members: ["솔프", "수앱", "뫄 펠"] }
+    { id: "team-luna", name: "Team Luna", members: [] },
+    { id: "team-stella", name: "Team Stella", members: [] },
+    { id: "team-eclipse", name: "Team Eclipse", members: [] },
+    { id: "team-nova", name: "Team Nova", members: [] },
+    { id: "team-orbit", name: "Team Orbit", members: [] },
+    { id: "team-comet", name: "Team Comet", members: [] },
+    { id: "team-aurora", name: "Team Aurora", members: [] },
+    { id: "team-meteor", name: "Team Meteor", members: [] }
   ];
 
-  const defaultState = { scores: [], history: [], eventNumber: 1 };
+  teams.forEach((team) => { team.members = []; });
+  const defaultState = { scores: [], history: [], eventNumber: 1, streamers: [] };
   let state = loadState();
   let busy = false;
   let connected = false;
   let selectedPlayer = null;
+  let editingStreamer = null;
 
   function renderAuth() {
     const admin = backend.isAdmin;
+    $("#register-streamer").hidden = !admin;
+    $("#register-streamer").disabled = !admin || !connected || busy;
+    $("#directory-manage-heading").hidden = !admin;
+    $$("[data-edit-streamer], [data-remove-streamer], #registration-form input, #registration-form select, #registration-form button[type=submit]").forEach((el) => { el.disabled = !admin || !connected || busy; });
+    if (!admin && $("#registration-dialog").open) $("#registration-dialog").close();
     $("#admin-login").hidden = admin;
     $("#admin-logout").hidden = !admin;
     $("#open-score-panel").hidden = !admin;
@@ -34,6 +41,7 @@ import { backend } from "./supabase-service.js";
     if (busy) return;
     try {
       state = await backend.read();
+      teams.forEach((team) => { team.members = state.streamers.filter((streamer) => streamer.team_id === team.id).map((streamer) => streamer.name); });
       connected = true;
       persist();
       renderAll();
@@ -65,7 +73,7 @@ import { backend } from "./supabase-service.js";
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       return saved && Array.isArray(saved.scores) && Array.isArray(saved.history)
-        ? { ...defaultState, ...saved }
+        ? { ...defaultState, ...saved, streamers: [] }
         : structuredClone(defaultState);
     } catch {
       return structuredClone(defaultState);
@@ -93,11 +101,11 @@ import { backend } from "./supabase-service.js";
   }
 
   function getIndividualRecords() {
-    const recordMap = new Map(teams.flatMap((team) => team.members.map((name) => [name, { name, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 }])));
+    const recordMap = new Map(state.streamers.map((streamer) => [streamer.name, { id: streamer.id, name: streamer.name, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 }]));
     state.history.forEach((event) => {
       event.standings.forEach((teamResult) => {
         teamResult.members.forEach((name) => {
-          if (!recordMap.has(name)) recordMap.set(name, { name, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 });
+          if (!recordMap.has(name)) return;
           const record = recordMap.get(name);
           record.appearances += 1;
           record.wins += teamResult.rank === 1 ? 1 : 0;
@@ -198,11 +206,12 @@ import { backend } from "./supabase-service.js";
       .map((record) => ({ ...record, rank: record.appearances ? ++rank : null, team: teams.find((team) => team.members.includes(record.name)) }));
     const filtered = ranked.filter((record) => normalize(record.name).includes(query) && (!teamId || record.team?.id === teamId));
     $("#leaderboard-count").textContent = `${filtered.length}명 / 전체 ${records.length}명 · 확정된 대회 전적 기준`;
-    const row = (record) => `<tr><td class="rank-cell ${record.rank && record.rank <= 3 ? "is-top" : ""}">${record.rank ? String(record.rank).padStart(2, "0") : "—"}</td><td><button class="player-link" type="button" data-player="${escapeHtml(record.name)}">${escapeHtml(record.name)}</button></td><td>${escapeHtml(record.team?.name ?? "미배정")}</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.appearances}회</td><td>${record.averageRank !== null ? `${record.averageRank.toFixed(2)}위` : "—"}</td></tr>`;
-    $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<tr><td colspan="7">검색 결과가 없습니다. 이름이나 팀을 다시 확인해 주세요.</td></tr>`
+    const columns = backend.isAdmin ? 8 : 7;
+    const row = (record) => `<tr><td class="rank-cell ${record.rank && record.rank <= 3 ? "is-top" : ""}">${record.rank ? String(record.rank).padStart(2, "0") : "—"}</td><td><button class="player-link" type="button" data-player="${escapeHtml(record.name)}">${escapeHtml(record.name)}</button></td><td>${escapeHtml(record.team?.name ?? "미배정")}</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.appearances}회</td><td>${record.averageRank !== null ? `${record.averageRank.toFixed(2)}위` : "—"}</td>${backend.isAdmin ? `<td class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">팀 변경</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></td>` : ""}</tr>`;
+    $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<tr><td colspan="${columns}">${records.length ? "검색 결과가 없습니다. 이름이나 팀을 다시 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</td></tr>`
       : $("#leaderboard-group").checked ? [...teams, { id: "", name: "미배정" }].map((team) => {
         const members = filtered.filter((record) => (record.team?.id ?? "") === team.id);
-        return members.length ? `<tr class="team-group-row"><th colspan="7" scope="rowgroup">${escapeHtml(team.name)} · ${members.length}명</th></tr>${members.map(row).join("")}` : "";
+        return members.length ? `<tr class="team-group-row"><th colspan="${columns}" scope="rowgroup">${escapeHtml(team.name)} · ${members.length}명</th></tr>${members.map(row).join("")}` : "";
       }).join("") : filtered.map(row).join("");
   }
 
@@ -290,6 +299,45 @@ import { backend } from "./supabase-service.js";
   }
 
   function init() {
+    $("#registration-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
+    const openRegistration = (id = null) => {
+      if (!backend.isAdmin || !connected || busy) return;
+      const streamer = state.streamers.find((streamer) => streamer.id === id);
+      editingStreamer = streamer?.id ?? null;
+      $("#registration-title").textContent = streamer ? "참가 팀 변경" : "스트리머 등록";
+      $("#registration-name").value = streamer?.name ?? "";
+      $("#registration-name").readOnly = !!streamer;
+      $("#registration-team").value = streamer?.team_id ?? "";
+      $("#registration-feedback").textContent = "";
+      $("#registration-dialog").showModal();
+    };
+    $("#register-streamer").addEventListener("click", () => openRegistration());
+    $("#close-registration").addEventListener("click", () => $("#registration-dialog").close());
+    $("#registration-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = $("#registration-name").value.trim();
+      if (!name) { $("#registration-feedback").textContent = "스트리머 이름을 입력해 주세요."; return; }
+      if (!backend.isAdmin || !connected || busy) return;
+      busy = true; renderAuth();
+      try {
+        await backend.saveStreamer(editingStreamer, name, $("#registration-team").value);
+        $("#registration-dialog").close();
+        $("#directory-feedback").textContent = `${name} 명단을 저장했습니다.`;
+      } catch (error) { $("#registration-feedback").textContent = error.message; }
+      finally { busy = false; await refresh(); }
+    });
+    $("#streamer-leaderboard-body").addEventListener("click", async (event) => {
+      const edit = event.target.closest("[data-edit-streamer]");
+      if (edit) { openRegistration(edit.dataset.editStreamer); return; }
+      const remove = event.target.closest("[data-remove-streamer]");
+      if (!remove || !backend.isAdmin || !connected || busy) return;
+      const streamer = state.streamers.find((streamer) => streamer.id === remove.dataset.removeStreamer);
+      if (!streamer || !confirm(`${streamer.name} 님을 등록 명단에서 삭제할까요? 대회 기록은 보관됩니다.`)) return;
+      busy = true; renderAuth();
+      try { await backend.deleteStreamer(streamer.id); $("#directory-feedback").textContent = `${streamer.name} 님을 명단에서 삭제했습니다.`; }
+      catch (error) { $("#directory-feedback").textContent = error.message; }
+      finally { busy = false; await refresh(); }
+    });
     $("#leaderboard-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
     $("#leaderboard-search").addEventListener("input", () => renderLeaderboard());
     $("#leaderboard-team").addEventListener("change", () => renderLeaderboard());
@@ -350,3 +398,4 @@ import { backend } from "./supabase-service.js";
 
   init();
 })();
+
