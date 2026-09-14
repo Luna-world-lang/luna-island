@@ -325,3 +325,22 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .directory-page #admin-login,.directory-page #admin-logout { border-color:#2a3047; color:#a8cbe9; }
 .directory-page .stars::after { content:''; position:absolute; inset:0 0 0 260px; opacity:.45; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700' viewBox='0 0 900 700'%3E%3Cg fill='none' stroke='%238b8cb3' stroke-width='1' opacity='.45'%3E%3Cpath d='M530 90L610 140L690 105L750 200L700 290L610 250L530 90M110 390L180 450L250 420L290 510L220 580'/%3E%3C/g%3E%3Cg fill='%23d4d2f2'%3E%3Ccircle cx='530' cy='90' r='2'/%3E%3Ccircle cx='610' cy='140' r='2.5'/%3E%3Ccircle cx='690' cy='105' r='2'/%3E%3Ccircle cx='750' cy='200' r='3'/%3E%3Ccircle cx='700' cy='290' r='2'/%3E%3Ccircle cx='610' cy='250' r='2'/%3E%3Ccircle cx='110' cy='390' r='2'/%3E%3Ccircle cx='180' cy='450' r='2.5'/%3E%3Ccircle cx='250' cy='420' r='2'/%3E%3Ccircle cx='290' cy='510' r='2'/%3E%3Ccircle cx='220' cy='580' r='2.5'/%3E%3C/g%3E%3C/svg%3E"); background-size:900px 700px; background-repeat:repeat; }
 @media(max-width:800px) { .directory-page .stars::after { left:0; } }
+
+/* Shared Luna theme for every page and management dialog */
+.directory-page { --surface:rgba(20,27,46,.94); --line:#333d55; --muted:#a2acc3; --gold:#c5b1ed; --cyan:#a8cbe9; --shadow:0 8px 26px #03050c44; }
+.directory-page .page:not(#page-leaderboard) .page-heading { padding-right:0; margin-bottom:28px; }
+.directory-page .dashboard-heading h1 { font-size:30px; border-left:4px solid #b99beb; padding-left:14px; }
+.directory-page .dashboard-heading .eyebrow { color:#c6b2ee; }
+.directory-page .stat-card,.directory-page .podium-card,.directory-page .champion-card,.directory-page .clock-card { border-radius:12px; background:linear-gradient(145deg,rgba(28,32,53,.96),rgba(15,21,37,.97)); border-color:#333d55; }
+.directory-page .podium-card:first-child { border-color:#9180b8; background:linear-gradient(145deg,#302840,#141b2e); }
+.directory-page .podium-card:first-child .podium-rank { background:#c5b1ed; color:#171328; }
+.directory-page .table-wrap { border-radius:12px; background:rgba(17,24,42,.96); }
+.directory-page thead { background:#1b2237; }
+.directory-page .section-heading h2 { font-size:22px; }
+.directory-page .champion-card .champion-round { color:#c5b1ed; }
+.directory-page .score-drawer { background:linear-gradient(160deg,#192037,#101627); border-color:#333d55; }
+.directory-page dialog { background:linear-gradient(145deg,#1c2035,#101627) !important; border-color:#635b81 !important; box-shadow:0 20px 80px #0008; }
+.directory-page .primary-button { background:#bba3e8; color:#171328; box-shadow:none; }
+.directory-page .secondary-button { background:#26283e; border-color:#635b81; }
+.directory-page .empty-state { background:rgba(17,24,42,.8); border-radius:12px; }
+@media(max-width:1100px) and (min-width:801px) { .directory-page .stats-grid { grid-template-columns:1fr; } .directory-page .dashboard-heading { align-items:flex-start; flex-direction:column; } .directory-page .clock-card { width:100%; text-align:left; } }
