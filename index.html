@@ -7,7 +7,7 @@
   <meta name="description" content="루나섬 이터널 리턴 내전 기록과 실시간 팀 순위 대시보드">
   <title>루나섬 | 내전 기록 대시보드</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23090b22'/%3E%3Cpath d='M42 11a23 23 0 1 0 10 40A25 25 0 0 1 42 11Z' fill='%23a78bfa'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=directory-3">
+  <link rel="stylesheet" href="styles.css?v=teams-4">
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -72,6 +72,7 @@
         <div class="section-heading">
           <div><p class="eyebrow">LIVE STANDINGS</p><h2>실시간 팀 순위</h2></div>
           <span class="round-status" id="round-status">입력된 라운드 0 / 4</span>
+          <button class="admin-button" type="button" data-edit-team-names hidden disabled>팀 이름 수정</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -102,6 +103,7 @@
         <label class="team-filter">팀<select id="leaderboard-team"><option value="">전체 팀</option></select></label>
         <label class="group-toggle"><input id="leaderboard-group" type="checkbox">팀별로 보기</label>
         <button id="register-streamer" class="admin-button" type="button" hidden disabled>＋ 스트리머 등록</button>
+        <button class="admin-button" type="button" data-edit-team-names hidden disabled>팀 이름 수정</button>
       </div>
       <p id="leaderboard-count" class="drawer-help" role="status"></p>
       <p id="directory-feedback" class="form-feedback" role="status"></p>
@@ -172,6 +174,15 @@
     </form>
   </dialog>
   <script src="supabase-config.js"></script>
-  <script type="module" src="app.js?v=directory-3"></script>
+  <dialog id="team-names-dialog" aria-labelledby="team-names-title">
+    <form id="team-names-form">
+      <div class="drawer-header"><h2 id="team-names-title">팀 이름 수정</h2><button class="icon-button" id="close-team-names" type="button" aria-label="팀 이름 수정 닫기">×</button></div>
+      <div id="team-names-fields"></div>
+      <p class="drawer-help">팀 구성과 점수는 유지됩니다. 이미 확정한 전적은 당시 팀 이름으로 보관됩니다.</p>
+      <button class="primary-button" type="submit">전체 팀 이름 저장</button>
+      <p id="team-names-feedback" class="form-feedback" role="status"></p>
+    </form>
+  </dialog>
+  <script type="module" src="app.js?v=teams-4"></script>
 </body>
 </html>

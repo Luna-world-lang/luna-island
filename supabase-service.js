@@ -35,13 +35,19 @@ export const backend = {
     if (error) throw new Error("로그아웃에 실패했습니다. 다시 시도해 주세요.");
   },
   async read() {
-    const [dashboard, directory] = await Promise.all([
+    const [dashboard, directory, teamNames] = await Promise.all([
       client.from("luna_dashboard").select("scores,history,event_number,revision").eq("id", 1).single(),
-      client.from("luna_streamers").select("id,name,team_id").order("created_at")
+      client.from("luna_streamers").select("id,name,team_id").order("created_at"),
+      client.from("luna_teams").select("id,name")
     ]);
-    if (dashboard.error || directory.error) throw new Error("경기 기록과 스트리머 명단을 불러오지 못했습니다.");
+    if (dashboard.error || directory.error || teamNames.error) throw new Error("경기 기록과 명단을 불러오지 못했습니다.");
     const data = dashboard.data;
-    return { scores: data.scores, history: data.history, eventNumber: data.event_number, revision: data.revision, streamers: directory.data };
+    return { scores: data.scores, history: data.history, eventNumber: data.event_number, revision: data.revision, streamers: directory.data, teams: teamNames.data };
+  },
+  async renameTeams(names, revision) {
+    if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
+    const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });
+    if (error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 창을 닫았다가 다시 열어 주세요." : "팀 이름을 저장하지 못했습니다. 중복 이름과 관리자 권한을 확인해 주세요.");
   },
   async saveStreamer(id, name, teamId) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");

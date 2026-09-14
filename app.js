@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=directory-3";
+import { backend } from "./supabase-service.js?v=teams-4";
 (() => {
   "use strict";
 
@@ -21,9 +21,14 @@ import { backend } from "./supabase-service.js?v=directory-3";
   let connected = false;
   let selectedPlayer = null;
   let editingStreamer = null;
+  let editingTeamsRevision = null;
+  let teamOptionsSignature = "";
 
   function renderAuth() {
     const admin = backend.isAdmin;
+    $$("[data-edit-team-names]").forEach((button) => { button.hidden = !admin; button.disabled = !admin || !connected || busy; });
+    $$("#team-names-form input, #team-names-form button[type=submit]").forEach((el) => { el.disabled = !admin || !connected || busy; });
+    if (!admin && $("#team-names-dialog").open) $("#team-names-dialog").close();
     $("#register-streamer").hidden = !admin;
     $("#register-streamer").disabled = !admin || !connected || busy;
     $("#directory-manage-heading").hidden = !admin;
@@ -41,6 +46,8 @@ import { backend } from "./supabase-service.js?v=directory-3";
     if (busy) return;
     try {
       state = await backend.read();
+      teams.forEach((team) => { team.name = state.teams.find((saved) => saved.id === team.id)?.name ?? team.name; });
+      updateTeamOptions();
       teams.forEach((team) => { team.members = state.streamers.filter((streamer) => streamer.team_id === team.id).map((streamer) => streamer.name); });
       connected = true;
       persist();
@@ -68,6 +75,18 @@ import { backend } from "./supabase-service.js?v=directory-3";
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+  function updateTeamOptions() {
+    const signature = JSON.stringify(teams.map((team) => [team.id, team.name]));
+    if (signature === teamOptionsSignature) return;
+    const options = teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join("");
+    for (const [selector, first] of [["#leaderboard-team", '<option value="">전체 팀</option>'], ["#registration-team", '<option value="">미배정</option>'], ["#score-team", ""]]) {
+      const select = $(selector), previous = select.value;
+      select.innerHTML = first + options;
+      if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    }
+    teamOptionsSignature = signature;
+  }
 
   function loadState() {
     try {
@@ -299,6 +318,24 @@ import { backend } from "./supabase-service.js?v=directory-3";
   }
 
   function init() {
+    $$("[data-edit-team-names]").forEach((button) => button.addEventListener("click", () => {
+      if (!backend.isAdmin || !connected || busy) return;
+      editingTeamsRevision = state.revision;
+      $("#team-names-fields").innerHTML = teams.map((team, index) => `<label>${index + 1}번 팀<input type="text" data-team-name="${team.id}" value="${escapeHtml(team.name)}" maxlength="40" required></label>`).join("");
+      $("#team-names-feedback").textContent = "";
+      $("#team-names-dialog").showModal();
+    }));
+    $("#close-team-names").addEventListener("click", () => $("#team-names-dialog").close());
+    $("#team-names-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!backend.isAdmin || !connected || busy) return;
+      const names = $$("[data-team-name]").map((input) => ({ id: input.dataset.teamName, name: input.value.trim() }));
+      if (names.some((team) => !team.name) || new Set(names.map((team) => team.name.toLocaleLowerCase("ko"))).size !== teams.length) { $("#team-names-feedback").textContent = "팀 이름은 비워 두거나 중복해서 사용할 수 없습니다."; return; }
+      busy = true; renderAuth();
+      try { await backend.renameTeams(names, editingTeamsRevision); $("#team-names-dialog").close(); $("#directory-feedback").textContent = "전체 팀 이름을 저장했습니다."; }
+      catch (error) { $("#team-names-feedback").textContent = error.message; }
+      finally { busy = false; await refresh(); }
+    });
     $("#registration-team").insertAdjacentHTML("beforeend", teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join(""));
     const openRegistration = (id = null) => {
       if (!backend.isAdmin || !connected || busy) return;
