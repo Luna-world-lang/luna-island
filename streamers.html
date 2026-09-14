@@ -7,9 +7,9 @@
   <meta name="description" content="루나섬 이터널 리턴 내전 기록과 실시간 팀 순위 대시보드">
   <title>루나섬 | 스트리머 리더보드</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23090b22'/%3E%3Cpath d='M42 11a23 23 0 1 0 10 40A25 25 0 0 1 42 11Z' fill='%23a78bfa'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=upload-6">
+  <link rel="stylesheet" href="styles.css?v=simple-7">
 </head>
-<body>
+<body class="directory-page">
   <div class="stars" aria-hidden="true"></div>
   <header class="site-header">
     <a class="brand" href="#dashboard" data-page-link="dashboard" aria-label="루나섬 대시보드로 이동">
@@ -97,18 +97,18 @@
     </section>
 
     <section class="page is-visible" id="page-leaderboard" data-view="leaderboard">
-      <div class="page-heading"><p class="eyebrow">STREAMER LEADERBOARD</p><h1>스트리머 리더보드</h1><p>등록된 스트리머의 프로필과 게임 닉네임, 전적을 확인합니다.</p></div>
+      <div class="page-heading"><p class="eyebrow">STREAMER LEADERBOARD</p><h1>스트리머 리더보드</h1><p>등록된 스트리머 목록 및 전적 검색</p></div>
       <div class="leaderboard-controls">
         <label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">리더보드 스트리머 검색</span><input id="leaderboard-search" type="search" placeholder="스트리머 또는 게임 닉네임 검색" autocomplete="off"></label>
-        <label class="team-filter">정렬<select id="leaderboard-sort"><option value="tier">티어순</option><option value="name">이름순</option><option value="records">루나섬 전적순</option></select></label>
-        <label class="team-filter">팀<select id="leaderboard-team"><option value="">전체 팀</option></select></label>
-        <label class="group-toggle"><input id="leaderboard-group" type="checkbox">팀별로 보기</label>
+        <div class="directory-sort"><button type="button" data-directory-sort="tier" aria-pressed="true">티어순</button><button type="button" data-directory-sort="name" aria-pressed="false">이름순</button></div>
+        <label class="team-filter" hidden>정렬<select id="leaderboard-sort"><option value="tier">티어순</option><option value="name">이름순</option><option value="records">루나섬 전적순</option></select></label>
+        <label class="team-filter" hidden>팀<select id="leaderboard-team"><option value="">전체 팀</option></select></label>
+        <label class="group-toggle" hidden><input id="leaderboard-group" type="checkbox">팀별로 보기</label>
         <button id="register-streamer" class="admin-button" type="button" hidden disabled>＋ 스트리머 등록</button>
-        <button class="admin-button" type="button" data-edit-team-names hidden disabled>팀 이름 수정</button>
+        
       </div>
-      <p id="leaderboard-count" class="drawer-help" role="status"></p>
+      <p id="leaderboard-count" hidden class="drawer-help" role="status"></p>
       <p id="directory-feedback" class="form-feedback" role="status"></p>
-      <p class="drawer-help">전적 검색은 게임 닉네임으로 DAK.GG를 엽니다. 루나섬 전적은 이 사이트의 대회 기록입니다.</p>
       <span id="directory-manage-heading" hidden></span>
       <div id="streamer-leaderboard-body" class="streamer-grid"></div>
     </section>
@@ -186,6 +186,6 @@
       <p id="team-names-feedback" class="form-feedback" role="status"></p>
     </form>
   </dialog>
-  <script type="module" src="app.js?v=upload-6"></script>
+  <script type="module" src="app.js?v=simple-7"></script>
 </body>
 </html>

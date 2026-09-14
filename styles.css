@@ -193,6 +193,31 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #team-names-fields input { width:100%; padding:12px; border:1px solid #403863; border-radius:8px; background:#090b22; color:#f1f0ff; font:inherit; font-size:16px; }
 @media(max-width:600px) { #team-names-fields { grid-template-columns:1fr; } }
 /* Streamer directory */
+.directory-page { background:#111322; }
+.directory-page .stars { display:none; }
+.directory-page .app-shell { max-width:1180px; }
+.directory-page .page-heading { margin-bottom:26px; }
+.directory-page .page-heading .eyebrow { display:none; }
+.directory-page .page-heading h1 { font-size:30px; letter-spacing:-.6px; }
+.directory-page .page-heading p { font-size:14px; }
+.directory-page .leaderboard-controls { gap:12px; margin-bottom:28px; }
+.leaderboard-controls [hidden] { display:none; }
+.directory-sort { display:flex; gap:6px; order:-1; }
+.directory-sort button { border:1px solid #34384d; background:#191c2d; color:#aeb3c7; border-radius:6px; padding:10px 16px; cursor:pointer; font:inherit; font-size:13px; }
+.directory-sort button[aria-pressed=true] { background:#7660b8; color:#fff; border-color:#7660b8; }
+.directory-page .streamer-grid { gap:12px; }
+.directory-page .streamer-card { display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:12px; padding:18px; border-radius:8px; background:#1b1e30; border:1px solid #303449; }
+.directory-page .streamer-profile { width:48px; height:48px; }
+.directory-page .avatar-fallback { font-size:20px; }
+.directory-page .streamer-title h2 { font-size:16px; }
+.directory-page .tier-badge { font-size:10px; padding:3px 5px; border-radius:4px; }
+.directory-page .game-nickname { margin-top:5px; font-size:12px; }
+.directory-page .streamer-card-actions { width:auto; border:0; padding:0; }
+.directory-page .record-search { font-size:11px; white-space:nowrap; color:#c0b1e6; }
+.directory-page .record-unavailable { font-size:10px; max-width:65px; }
+.directory-page .streamer-card .directory-actions { grid-column:1/-1; margin:0; padding-top:10px; border-top:1px solid #303449; }
+.directory-page .streamer-divider { font-size:13px; margin-top:8px; padding-bottom:8px; }
+.directory-page .form-feedback:empty { display:none; }
 .registration-preview { width:96px; height:96px; object-fit:cover; border-radius:50%; margin:12px 0; }
 .registration-preview[hidden] { display:none; }
 #registration-profile::file-selector-button { background:#423362; color:#fff; border:0; border-radius:6px; padding:8px 12px; margin-right:10px; cursor:pointer; }
