@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=ops-12";
-import { initAdminOps } from "./admin-ops.js?v=ops-12";
+import { backend } from "./supabase-service.js?v=game-13";
+import { initAdminOps } from "./admin-ops.js?v=game-13";
 (() => {
   "use strict";
 

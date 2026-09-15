@@ -1,4 +1,4 @@
-import {balance, tiers, tierCost, parseCSV, aggregate} from './ops-core.js?v=ops-12';
+import {balance, tiers, tierCost, parseCSV, aggregate} from './ops-core.js?v=game-13';
 export function initAdminOps(backend, refresh) {
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const button=document.createElement('button'); button.id='open-admin-ops'; button.className='admin-button';button.hidden=true;button.textContent='팀 편성 · 집계 · 백업';
@@ -9,7 +9,7 @@ export function initAdminOps(backend, refresh) {
   <section data-panel="roster"><p>출석자를 드래그해 팀에 놓거나 카드의 팀 선택을 이용하세요. 변경한 편성은 저장 후 공개 대시보드에 반영됩니다.</p>
   <div class="ops-toolbar"><label>사용할 팀 수<input id="ops-team-count" type="number" min="1" max="8" value="8"></label><label>팀당 정원<input id="ops-capacity" type="number" min="1" max="20" value="3"></label><button id="ops-auto">균형 자동 분배</button><button id="ops-all-present">전체 출석</button><button id="ops-all-absent">전체 결석</button><button id="ops-save" class="primary-button">출석·편성 저장</button><button id="ops-reload">저장 상태 다시 읽기</button></div>
   <p class="drawer-help">티어별 기본 코스트는 SSS 10 → SS 9 → S 8 → A 7 → B 6 → C 5 → D 4 → F 3 → 닭 2 → 나뭇가지 1입니다. 코스트를 직접 조정할 수 있으며, 자동 분배는 인원수와 코스트 합계를 균형 있게 맞춥니다.</p><p id="ops-count"></p><div id="ops-board"></div></section>
-  <section data-panel="import" hidden><h3>내려받은 결과 파일 집계</h3><p>CSV/TSV 파일의 열을 연결해 미리보기한 뒤 저장합니다. 게임 원본 파일 형식은 샘플 확인 후 전용 연결이 가능합니다.</p>
+  <section data-panel="import" hidden><h3>게임 ID로 결과 불러오기</h3><div class="ops-toolbar"><label>게임 ID<input id="ops-game-id" inputmode="numeric" maxlength="12" placeholder="예: 64894800"></label><button id="ops-game-lookup">경기 조회</button></div><p>공식 경기 결과를 조회한 뒤 게임 속 팀과 루나섬 팀을 연결합니다. 등록된 게임 닉네임을 기준으로 팀을 제안하며, 저장 전 직접 확인할 수 있습니다.</p><div id="ops-game-teams"></div><button id="ops-game-apply" hidden>연결한 팀으로 집계 준비</button><hr><h3>또는 결과 파일 가져오기</h3><p>CSV/TSV 파일의 열을 연결해 미리보기한 뒤 저장합니다.</p>
   <label>결과 파일<input id="ops-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"></label><div id="ops-mapping" hidden>
   <div class="ops-toolbar"><label>행 기준<select id="ops-mode"><option value="player">선수별 개인 킬</option><option value="team">팀별 팀 킬</option></select></label><label>닉네임 / 팀 이름 열<select id="ops-col-name"></select></label><label>순위 열<select id="ops-col-rank"></select></label><label>킬 열<select id="ops-col-kills"></select></label><label>라운드<input id="ops-round" type="number" min="1" max="4" value="1"></label><label>킬당 점수<input id="ops-kill-point" type="number" min="0" max="9999" value="1"></label></div>
   <p>선수별 파일은 등록한 게임 닉네임과 정확히 일치해야 합니다. 같은 팀의 개인 킬을 합산합니다. 팀 킬이 선수마다 반복된 파일은 선수별 방식으로 넣지 마세요.</p><div class="ops-toolbar">${Array.from({length:8},(_,i)=>`<label>${i+1}위 점수<input data-placement="${i+1}" type="number" min="0" max="999999" placeholder="입력 필요"></label>`).join('')}</div>
@@ -17,10 +17,10 @@ export function initAdminOps(backend, refresh) {
   <section data-panel="backup" hidden><h3>기록을 안전하게 보관하세요</h3><p>현재 점수, 우승 기록, 스트리머 명단, 팀 이름, 출석·코스트·편성을 서버에 백업하고 JSON 파일로 내려받습니다. 프로필 사진은 주소만 포함됩니다.</p><button id="ops-backup" class="primary-button">현재 상태 백업 · 내려받기</button><p>복원하면 해당 시점의 전체 상태로 돌아갑니다. 복원 직전 상태도 자동 백업되어 되돌릴 수 있습니다. 서버 백업은 최근 50개를 표시합니다.</p><div id="ops-backups"></div></section>`;
   document.body.append(dialog);
   const $=s=>dialog.querySelector(s), $$=s=>[...dialog.querySelectorAll(s)];
-  let draft=[], data, revision, backups=[], busy=false, dirty=false, csv=null, preview=null, dragged=null;
+  let draft=[], data, revision, backups=[], busy=false, dirty=false, csv=null, preview=null, dragged=null, match=null, sourceGameId=null;
   const say=t=>{$('#ops-feedback').textContent=t;};
   const download=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);};
-  function auth() {button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){dialog.close();draft=[];data=null;csv=null;preview=null;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
+  function auth() {button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){dialog.close();draft=[];data=null;csv=null;preview=null;match=null;sourceGameId=null;$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
   function setBusy(value){busy=value;$$('button,input,select').forEach(e=>e.disabled=value);auth();}
   async function action(fn){if(busy||!backend.isAdmin)return;setBusy(true);try{await fn();}catch(e){say(e.message);}finally{setBusy(false);}}
   function invalidate(){dirty=true;preview=null;$('#ops-import-save').hidden=true;$('#ops-import-preview').replaceChildren();say('저장하지 않은 변경사항이 있습니다.');}
@@ -57,9 +57,29 @@ export function initAdminOps(backend, refresh) {
   $('#ops-reload').onclick=()=>action(async()=>{if(dirty&&!confirm('저장하지 않은 편성을 버리고 다시 읽을까요?'))return;await load();say('저장된 상태를 불러왔습니다.');});
   for(const input of [$('#ops-team-count'),$('#ops-capacity')])input.onchange=invalidate;
   const clearPreview=()=>{preview=null;$('#ops-import-save').hidden=true;$('#ops-import-preview').replaceChildren();};
+  const clearMatch=()=>{match=null;sourceGameId=null;csv=null;clearPreview();$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-mapping').hidden=true;};
+  $('#ops-game-id').oninput=clearMatch;
+  $('#ops-game-lookup').onclick=()=>action(async()=>{
+    clearMatch();if(dirty)throw Error('팀 편성을 먼저 저장하세요.');
+    const id=$('#ops-game-id').value.trim();if(!/^[1-9][0-9]{0,11}$/.test(id))throw Error('게임 ID를 숫자로 입력하세요.');
+    say('공식 경기 결과를 조회하는 중…');match=await backend.lookupGame(id);
+    $('#ops-game-teams').innerHTML=`<p>게임 ${esc(match.gameId)} · ${esc(match.startDtm)} · ${match.teams.length}팀</p>`+match.teams.map((t,i)=>{
+      const linked=t.members.map(m=>{const found=data.streamers.filter(s=>s.game_nickname===m.nickname);return found.length===1?found[0].team_id:null;});
+      const suggested=linked.length&&linked.every(id=>id&&id===linked[0])?linked[0]:'';
+      return `<article class="ops-backup-row"><span><strong>게임 팀 ${t.number} · ${t.rank}위 · ${t.kills}킬</strong><br>${t.members.map(m=>esc(m.nickname)+' ('+m.kills+'킬)').join(' · ')}</span><label>루나섬 팀 연결<select data-game-team="${i}"><option value="">팀을 선택하세요</option>${data.teams.map(team=>`<option value="${esc(team.id)}" ${suggested===team.id?'selected':''}>${esc(team.name)}</option>`).join('')}</select></label></article>`;
+    }).join('');$('#ops-game-apply').hidden=false;say('게임 속 팀과 루나섬 팀 연결을 확인하세요.');
+  });
+  $('#ops-game-teams').onchange=()=>{sourceGameId=null;csv=null;clearPreview();$('#ops-mapping').hidden=true;};
+  $('#ops-game-apply').onclick=()=>{try{
+    if(!match)return;const selected=$$('[data-game-team]').map(s=>s.value);
+    if(selected.some(x=>!x)||new Set(selected).size!==selected.length)throw Error('각 게임 팀을 서로 다른 루나섬 팀에 연결하세요.');
+    csv=[['team','rank','kills'],...match.teams.map((t,i)=>[selected[i],String(t.rank),String(t.kills)])];sourceGameId=match.gameId;
+    for(const [id,index] of [['name',0],['rank',1],['kills',2]]){$('#ops-col-'+id).innerHTML=csv[0].map((c,i)=>`<option value="${i}">${c}</option>`).join('');$('#ops-col-'+id).value=String(index);}
+    $('#ops-mode').value='team';$('#ops-mapping').hidden=false;clearPreview();say('팀을 연결했습니다. 라운드와 순위 점수를 입력한 뒤 집계 미리보기를 누르세요.');
+  }catch(e){say(e.message);}};
   $('#ops-mapping').addEventListener('change',clearPreview);
   $('#ops-file').onchange=()=>action(async()=>{
-    clearPreview();csv=null;$('#ops-mapping').hidden=true;const file=$('#ops-file').files[0];if(!file)return;
+    clearMatch();const file=$('#ops-file').files[0];if(!file)return;
     if(file.size>5*1024*1024)throw Error('결과 파일은 5MB 이하로 선택하세요.');
     if(!/\.(csv|tsv)$/i.test(file.name))throw Error('CSV 또는 TSV 파일을 선택하세요. 게임 원본은 샘플 확인 후 연결합니다.');
     csv=parseCSV(await file.text());
@@ -70,7 +90,8 @@ export function initAdminOps(backend, refresh) {
   $('#ops-preview').onclick=()=>{try{
     clearPreview();if(dirty)throw Error('팀 편성을 먼저 저장해 주세요.');if(!csv)throw Error('결과 파일을 선택하세요.');
     preview=aggregate(csv,{name:Number($('#ops-col-name').value),rank:Number($('#ops-col-rank').value),kills:Number($('#ops-col-kills').value)},$('#ops-mode').value,data.streamers,data.teams,Number($('#ops-round').value),Object.fromEntries($$('[data-placement]').map(e=>[e.dataset.placement,e.value])),$('#ops-kill-point').value===''?NaN:Number($('#ops-kill-point').value));
-    $('#ops-import-preview').innerHTML=`<div class="table-wrap"><table><thead><tr><th>라운드</th><th>팀</th><th>순위</th><th>킬</th><th>점수</th><th>처리</th></tr></thead><tbody>${preview.map(r=>`<tr><td>${r.round}R</td><td>${esc(data.teams.find(t=>t.id===r.teamId)?.name)}</td><td>${r.placement}</td><td>${r.kills}</td><td>${r.points}</td><td>${data.scores.some(s=>s.round===r.round&&s.teamId===r.teamId)?'기존 점수 교체':'새 점수'}</td></tr>`).join('')}</tbody></table></div>`;
+    if(sourceGameId){if(data.scores.some(s=>s.sourceGameId===sourceGameId&&s.round!==preview[0].round))throw Error('이 게임은 이미 다른 라운드에 집계되어 있습니다. 기존 점수를 확인하세요.');preview=preview.map(r=>({...r,sourceGameId}));}
+    $('#ops-import-preview').innerHTML=`${sourceGameId?'<p>게임 ID '+esc(sourceGameId)+'</p>':''}<div class="table-wrap"><table><thead><tr><th>라운드</th><th>팀</th><th>순위</th><th>킬</th><th>점수</th><th>처리</th></tr></thead><tbody>${preview.map(r=>`<tr><td>${r.round}R</td><td>${esc(data.teams.find(t=>t.id===r.teamId)?.name)}</td><td>${r.placement}</td><td>${r.kills}</td><td>${r.points}</td><td>${data.scores.some(s=>s.round===r.round&&s.teamId===r.teamId)?'기존 점수 교체':'새 점수'}</td></tr>`).join('')}</tbody></table></div>`;
     $('#ops-import-save').hidden=false;say('집계 미리보기입니다. 저장할 팀과 점수를 확인하세요.');
   }catch(e){preview=null;say(e.message);}};
   $('#ops-import-save').onclick=()=>action(async()=>{if(!preview)return;if(!confirm('미리보기의 결과를 저장할까요? 동일 라운드·팀 점수는 교체되며 변경 전 상태는 자동 백업됩니다.'))return;await backend.ops('import',{scores:preview},revision);await load();await refresh();say('결과를 집계해 저장했습니다.');});

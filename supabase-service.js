@@ -55,6 +55,17 @@ export const backend = {
     if(error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 저장 상태를 다시 읽은 뒤 작업해 주세요." : error.message.includes("roster_changed") ? "등록 명단이 변경되었습니다. 저장 상태를 다시 읽어 주세요." : "처리하지 못했습니다. 입력값과 관리자 연결을 확인해 주세요.");
     return data;
   },
+  async lookupGame(gameId) {
+    if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
+    const {data,error}=await client.functions.invoke('luna-game',{body:{gameId}});
+    if(error){
+      let message='경기를 조회하지 못했습니다. 관리자 로그인과 서버 연결을 확인하세요.';
+      try { const details=await error.context.json(); if(typeof details.error==='string')message=details.error; } catch {}
+      throw new Error(message);
+    }
+    if(!data?.teams?.length)throw new Error('경기 결과가 없습니다.');
+    return data;
+  },
   async renameTeams(names, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });
