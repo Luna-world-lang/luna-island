@@ -353,3 +353,31 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .history-actions button,.history-trash-item button { padding:8px 12px; background:#2b2944; color:#d3c0f7; border:1px solid #635b81; border-radius:6px; cursor:pointer; }
 #history-trash { margin-top:28px; padding:18px; border:1px solid #3b415d; border-radius:10px; background:#11182a; }
 .history-trash-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; }
+/* Private tournament operations */
+#admin-ops { width:min(1320px,96vw); max-width:96vw; max-height:94dvh; overflow:auto; padding:28px; color:#e9e7ff; background:#10132b; border:1px solid #514678; border-radius:20px; }
+#admin-ops::backdrop { background:#030516c9; }
+#admin-ops [hidden] { display:none!important; }
+#admin-ops button { cursor:pointer; padding:10px 14px; border:1px solid #554b78; border-radius:9px; color:#f0ecff; background:#24203d; }
+#admin-ops button:disabled { opacity:.45; cursor:wait; }
+#admin-ops input,#admin-ops select { display:block; width:100%; min-width:0; padding:9px; border-radius:7px; background:#0c1024; border:1px solid #46415f; color:#eeeaff; }
+#admin-ops label { display:block; font-size:12px; color:#beb8d6; }
+#admin-ops p { line-height:1.7; color:#bab6cf; }
+#admin-ops h2 { margin:0; }
+#admin-ops h3 { font-size:17px; }
+#admin-ops .primary-button { background:#7053b1; }
+.ops-tabs,.ops-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:20px 0; }
+.ops-tabs button[aria-pressed=true] { background:#654b9c!important; }
+.ops-toolbar label { flex:0 1 140px; }
+#ops-board { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.ops-zone { min-height:150px; padding:14px; background:#151a33; border:1px dashed #585071; border-radius:14px; }
+.ops-zone h3 { margin:0 0 14px; }
+.ops-zone h3 small { display:block; margin-top:7px; color:#a99fca; font-size:12px; }
+.ops-player { padding:12px; margin:10px 0; border-radius:10px; background:#23223e; border:1px solid #39364f; }
+.ops-player[draggable=true] { cursor:grab; }
+.ops-player strong { display:block; margin-bottom:10px; overflow-wrap:anywhere; }
+.ops-player-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ops-backup-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:16px 0; border-bottom:1px solid #38324d; }
+.ops-backup-row span { flex:1 1 280px; }
+#ops-feedback { position:sticky; top:0; z-index:3; background:#1e1c35; padding:10px 14px; border-radius:9px; }
+@media(max-width:900px) { #ops-board { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { #admin-ops { padding:15px; } #ops-board { grid-template-columns:1fr; } .ops-tabs button { flex:1; padding:8px!important; } }

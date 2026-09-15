@@ -49,6 +49,12 @@ export const backend = {
     const { error } = await client.rpc("luna_history_manage", { p_action: action, p_number: number, p_event: event, p_revision: revision });
     if (error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 창을 닫고 다시 열어 주세요." : "저장하지 못했습니다. 순위 중복, 참가자 중복과 입력값을 확인해 주세요.");
   },
+  async ops(action, payload = {}, revision = null) {
+    if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
+    const {data,error} = await client.rpc("luna_admin_ops",{p_action:action,p_payload:payload,p_revision:revision});
+    if(error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 저장 상태를 다시 읽은 뒤 작업해 주세요." : error.message.includes("roster_changed") ? "등록 명단이 변경되었습니다. 저장 상태를 다시 읽어 주세요." : "처리하지 못했습니다. 입력값과 관리자 연결을 확인해 주세요.");
+    return data;
+  },
   async renameTeams(names, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });

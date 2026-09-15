@@ -1,4 +1,5 @@
-import { backend } from "./supabase-service.js?v=history-11";
+import { backend } from "./supabase-service.js?v=ops-12";
+import { initAdminOps } from "./admin-ops.js?v=ops-12";
 (() => {
   "use strict";
 
@@ -26,6 +27,7 @@ import { backend } from "./supabase-service.js?v=history-11";
   let teamOptionsSignature = "";
 
   function renderAuth() {
+    opsUI.auth();
     const admin = backend.isAdmin;
     if (!admin && $("#history-dialog").open) $("#history-dialog").close();
     $$("[data-history-action], #history-form input, #history-form button[type=submit]").forEach(el => { el.disabled = !admin || !connected || busy; });
@@ -494,6 +496,7 @@ import { backend } from "./supabase-service.js?v=history-11";
     }).catch((error) => { $("#sync-label").textContent = error.message; renderAuth(); });
   }
 
+  const opsUI = initAdminOps(backend, refresh);
   init();
 })();
 
