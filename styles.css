@@ -344,3 +344,12 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .directory-page .secondary-button { background:#26283e; border-color:#635b81; }
 .directory-page .empty-state { background:rgba(17,24,42,.8); border-radius:12px; }
 @media(max-width:1100px) and (min-width:801px) { .directory-page .stats-grid { grid-template-columns:1fr; } .directory-page .dashboard-heading { align-items:flex-start; flex-direction:column; } .directory-page .clock-card { width:100%; text-align:left; } }
+#history-dialog { width:min(800px,calc(100% - 32px)); max-height:90vh; overflow:auto; padding:24px; border:1px solid #635b81; border-radius:16px; color:#eee; }
+#history-dialog::backdrop { background:#03050ccc; }
+#history-fields fieldset { border:1px solid #3b415d; border-radius:10px; padding:16px; margin:18px 0; }
+#history-form label { display:block; margin:8px 0; }
+#history-form input { width:100%; padding:10px; border:1px solid #424863; border-radius:6px; background:#10162a; color:#eee; }
+.history-actions { display:flex; gap:8px; margin-top:16px; }
+.history-actions button,.history-trash-item button { padding:8px 12px; background:#2b2944; color:#d3c0f7; border:1px solid #635b81; border-radius:6px; cursor:pointer; }
+#history-trash { margin-top:28px; padding:18px; border:1px solid #3b415d; border-radius:10px; background:#11182a; }
+.history-trash-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; }

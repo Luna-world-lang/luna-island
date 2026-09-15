@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=all-stars-10";
+import { backend } from "./supabase-service.js?v=history-11";
 (() => {
   "use strict";
 
@@ -21,11 +21,14 @@ import { backend } from "./supabase-service.js?v=all-stars-10";
   let connected = false;
   let selectedPlayer = null;
   let editingStreamer = null;
+  let editingEvent = null, historyRevision = null;
   let editingTeamsRevision = null;
   let teamOptionsSignature = "";
 
   function renderAuth() {
     const admin = backend.isAdmin;
+    if (!admin && $("#history-dialog").open) $("#history-dialog").close();
+    $$("[data-history-action], #history-form input, #history-form button[type=submit]").forEach(el => { el.disabled = !admin || !connected || busy; });
     $$("[data-edit-team-names]").forEach((button) => { button.hidden = !admin; button.disabled = !admin || !connected || busy; });
     $$("#team-names-form input, #team-names-form button[type=submit]").forEach((el) => { el.disabled = !admin || !connected || busy; });
     if (!admin && $("#team-names-dialog").open) $("#team-names-dialog").close();
@@ -203,10 +206,12 @@ import { backend } from "./supabase-service.js?v=all-stars-10";
     } else {
       championRoot.innerHTML = [...state.history].reverse().map((event) => {
         const winner = event.standings[0];
-        return `<article class="champion-card"><span class="champion-round">제 ${event.number}회 루나섬</span><h3>${escapeHtml(winner.name)}</h3><p>${winner.members.map(escapeHtml).join(" · ")}</p><strong>${winner.points}점 · ${winner.kills}킬</strong><small>${escapeHtml(event.date)}</small></article>`;
+        return `<article class="champion-card"><span class="champion-round">제 ${event.number}회 루나섬</span><h3>${escapeHtml(winner.name)}</h3><p>${winner.members.map(escapeHtml).join(" · ")}</p><strong>${winner.points}점 · ${winner.kills}킬</strong><small>${escapeHtml(event.date)}</small>${backend.isAdmin ? `<div class="history-actions"><button type="button" data-history-action="edit" data-number="${event.number}">기록 수정</button><button type="button" data-history-action="delete" data-number="${event.number}">기록 삭제</button></div>` : ""}</article>`;
       }).join("");
     }
 
+    $("#history-trash").hidden = !backend.isAdmin;
+    $("#history-trash-list").innerHTML = (state.trash || []).map(event => `<div class="history-trash-item">제 ${Number(event.number)}회 · ${escapeHtml(event.date)} <button type="button" data-history-action="restore" data-number="${Number(event.number)}">복구</button></div>`).join("") || "삭제한 기록이 없습니다.";
     const records = getIndividualRecords();
     const query = $("#player-search").value.trim().toLocaleLowerCase("ko");
     const filtered = records.filter((record) => record.name.toLocaleLowerCase("ko").includes(query));
@@ -327,6 +332,35 @@ import { backend } from "./supabase-service.js?v=all-stars-10";
   }
 
   function init() {
+    $("#close-history").addEventListener("click", () => $("#history-dialog").close());
+    $("#page-champions").addEventListener("click", async event => {
+      const button = event.target.closest("[data-history-action]");
+      if (!button || !backend.isAdmin || !connected || busy) return;
+      const number = Number(button.dataset.number), action = button.dataset.historyAction;
+      const record = [...state.history, ...(state.trash || [])].find(item => item.number === number);
+      if (!record) return;
+      if (action === "edit") {
+        editingEvent = structuredClone(record); historyRevision = state.revision;
+        $("#history-title").textContent = '제 ' + number + '회 기록 수정';
+        $("#history-date").value = record.date;
+        $("#history-fields").innerHTML = record.standings.map((team,i) => `<fieldset data-history-row="${i}"><legend>${escapeHtml(team.name)}</legend><label>팀 이름<input data-field="name" value="${escapeHtml(team.name)}" maxlength="40" required></label><label>참가자 (쉼표로 구분)<input data-field="members" value="${escapeHtml(team.members.join(', '))}"></label><div class="form-row three"><label>최종 순위<input data-field="rank" type="number" min="1" max="${record.standings.length}" value="${team.rank}" required></label><label>팀 점수<input data-field="points" type="number" min="0" max="999999" value="${team.points}" required></label><label>팀 킬<input data-field="kills" type="number" min="0" max="999999" value="${team.kills}" required></label></div></fieldset>`).join("");
+        $("#history-form-feedback").textContent = ""; $("#history-dialog").showModal(); return;
+      }
+      if (action === "delete" && !confirm('제 ' + number + '회 기록을 삭제할까요? 우승·개인 기록 집계에서 제외되며 삭제한 기록에서 복구할 수 있습니다.')) return;
+      busy = true; renderAuth();
+      try { await backend.manageHistory(action,number,{},state.revision); $("#history-feedback").textContent = action === 'restore' ? '기록을 복구했습니다.' : '기록을 삭제했습니다. 아래에서 복구할 수 있습니다.'; }
+      catch(error) { $("#history-feedback").textContent = error.message; }
+      finally { busy = false; await refresh(); }
+    });
+    $("#history-form").addEventListener("submit", async event => {
+      event.preventDefault(); if (!backend.isAdmin || !connected || busy || !editingEvent) return;
+      const standings = $$("[data-history-row]").map(row => { const old = editingEvent.standings[Number(row.dataset.historyRow)]; return {id:old.id,name:$("[data-field=name]",row).value.trim(),members:$("[data-field=members]",row).value.split(',').map(x=>x.trim()).filter(Boolean),rank:Number($("[data-field=rank]",row).value),points:Number($("[data-field=points]",row).value),kills:Number($("[data-field=kills]",row).value)}; });
+      if(new Set(standings.map(x=>x.rank)).size !== standings.length) { $("#history-form-feedback").textContent = '순위를 중복 없이 입력해 주세요.'; return; }
+      busy = true; renderAuth();
+      try { await backend.manageHistory('edit',editingEvent.number,{date:$("#history-date").value.trim(),standings},historyRevision); $("#history-dialog").close(); $("#history-feedback").textContent = '수정한 순위와 참가자로 우승·개인 기록 집계를 갱신했습니다.'; }
+      catch(error) { $("#history-form-feedback").textContent = error.message; }
+      finally { busy = false; await refresh(); }
+    });
     $$("[data-edit-team-names]").forEach((button) => button.addEventListener("click", () => {
       if (!backend.isAdmin || !connected || busy) return;
       editingTeamsRevision = state.revision;

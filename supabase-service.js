@@ -42,7 +42,12 @@ export const backend = {
     ]);
     if (dashboard.error || directory.error || teamNames.error) throw new Error("경기 기록과 명단을 불러오지 못했습니다.");
     const data = dashboard.data;
-    return { scores: data.scores, history: data.history, eventNumber: data.event_number, revision: data.revision, streamers: directory.data, teams: teamNames.data };
+    return { scores: data.scores, history: data.history.filter(event => !event.deleted), trash: data.history.filter(event => event.deleted), eventNumber: data.event_number, revision: data.revision, streamers: directory.data, teams: teamNames.data };
+  },
+  async manageHistory(action, number, event, revision) {
+    if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
+    const { error } = await client.rpc("luna_history_manage", { p_action: action, p_number: number, p_event: event, p_revision: revision });
+    if (error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 창을 닫고 다시 열어 주세요." : "저장하지 못했습니다. 순위 중복, 참가자 중복과 입력값을 확인해 주세요.");
   },
   async renameTeams(names, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
