@@ -66,6 +66,12 @@ export const backend = {
     if(!data?.teams?.length)throw new Error('경기 결과가 없습니다.');
     return data;
   },
+  async manageBackup(action, id = null) {
+    if(!this.isAdmin) throw new Error('관리자 로그인이 필요합니다.');
+    const {data,error}=await client.rpc('luna_backup_manage',{p_action:action,p_id:id});
+    if(error)throw new Error('백업 목록이 변경되었거나 연결이 끊겼습니다. 목록을 새로고침해 주세요.');
+    return data;
+  },
   async renameTeams(names, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });
