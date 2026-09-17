@@ -1,5 +1,6 @@
-import { backend } from "./supabase-service.js?v=roster-15";
-import { initAdminOps } from "./admin-ops.js?v=roster-15";
+import { backend } from "./supabase-service.js?v=attendance-16";
+import { initAdminOps } from "./admin-ops.js?v=attendance-16";
+import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
 
@@ -25,10 +26,39 @@ import { initAdminOps } from "./admin-ops.js?v=roster-15";
   let editingEvent = null, historyRevision = null;
   let editingTeamsRevision = null;
   let teamOptionsSignature = "";
+  let attendanceData = null;
+
+  function attendanceControls(record) {
+    if (!backend.isAdmin) return "";
+    const status=attendanceData?.players?.find(p=>p.id===record.id)?.attendance || (record.team_id?'present':'pending');
+    return `<div class="directory-attendance" role="group" aria-label="${escapeHtml(record.name)} 출석 상태"><span>출석 상태</span>${[['pending','미확인'],['present','출석'],['absent','결석']].map(([value,label])=>`<button type="button" data-attendance-id="${escapeHtml(record.id)}" data-attendance="${value}" aria-pressed="${status===value}" ${busy||!attendanceData?'disabled':''}>${label}</button>`).join('')}</div>`;
+  }
+
+  async function saveAttendance(id, status) {
+    if(!backend.isAdmin||!connected||busy||!['pending','present','absent'].includes(status))return;
+    const person=state.streamers.find(p=>p.id===id);if(!person)return;
+    if(status!=='present'&&person.team_id&&!confirm(`${person.name} 님을 ${status==='absent'?'결석':'미확인'}으로 변경하면 현재 팀에서 제외됩니다. 변경할까요?`))return;
+    busy=true;renderAuth();
+    try {
+      const ops=await backend.ops('read'), current=await backend.read();
+      if(ops.revision!==current.revision)throw Error('다른 화면에서 변경되었습니다. 다시 시도하세요.');
+      if(!current.streamers.some(p=>p.id===id))throw Error('명단에서 삭제된 스트리머입니다.');
+      const players=current.streamers.map(p=>{
+        const old=ops.data.players?.find(x=>x.id===p.id);
+        const attendance=p.id===id?status:(old?.attendance||(p.team_id?'present':'pending'));
+        return {id:p.id,tier:p.tier||'',cost:old?.cost??tierCost(p.tier),attendance,team:attendance==='present'?(p.team_id||''):''};
+      });
+      await backend.ops('save',{players,capacity:ops.data.capacity||3,teamCount:ops.data.teamCount||8},ops.revision);
+      $('#directory-feedback').textContent=`${person.name} 님을 ${status==='present'?'출석':status==='absent'?'결석':'미확인'}으로 저장했습니다. 팀 편성에도 반영됩니다.`;
+    } catch(error){$('#directory-feedback').textContent=error.message;}
+    finally{busy=false;await refresh();}
+  }
 
   function renderAuth() {
     opsUI.auth();
     const admin = backend.isAdmin;
+    $$('[data-attendance-id]').forEach(el=>{el.hidden=!admin;el.disabled=!admin||!connected||busy||!attendanceData;});
+    if(!admin)attendanceData=null;
     if (!admin && $("#history-dialog").open) $("#history-dialog").close();
     $$("[data-history-action], #history-form input, #history-form button[type=submit]").forEach(el => { el.disabled = !admin || !connected || busy; });
     $$("[data-edit-team-names]").forEach((button) => { button.hidden = !admin; button.disabled = !admin || !connected || busy; });
@@ -51,6 +81,7 @@ import { initAdminOps } from "./admin-ops.js?v=roster-15";
     if (busy) return;
     try {
       state = await backend.read();
+      attendanceData = backend.isAdmin ? (await backend.ops('read')).data : null;
       teams.forEach((team) => { team.name = state.teams.find((saved) => saved.id === team.id)?.name ?? team.name; });
       updateTeamOptions();
       teams.forEach((team) => { team.members = state.streamers.filter((streamer) => streamer.team_id === team.id).map((streamer) => streamer.name); });
@@ -238,7 +269,7 @@ import { initAdminOps } from "./admin-ops.js?v=roster-15";
     const card = record => {
       const profile = safeProfileUrl(record.profile_url);
       const image = profile ? `<img class="streamer-avatar" src="${escapeHtml(profile)}" alt="${escapeHtml(record.name)} 프로필" loading="lazy" referrerpolicy="no-referrer">` : "";
-      return `<article class="streamer-card" data-tier="${escapeHtml(record.tier || "")}"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">${escapeHtml(record.game_nickname || "닉네임 미등록")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}</div>${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
+      return `<article class="streamer-card" data-tier="${escapeHtml(record.tier || "")}"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">${escapeHtml(record.game_nickname || "닉네임 미등록")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}</div>${attendanceControls(record)}${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
     };
     const group = (label, members) => members.length ? `<h2 class="streamer-divider">${escapeHtml(label)} · ${members.length}명</h2>${members.map(card).join("")}` : "";
     $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<div class="streamer-empty">${records.length ? "검색 결과가 없습니다. 스트리머 이름이나 게임 닉네임을 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</div>`
@@ -425,6 +456,8 @@ import { initAdminOps } from "./admin-ops.js?v=roster-15";
       finally { busy = false; await refresh(); }
     });
     $("#streamer-leaderboard-body").addEventListener("click", async (event) => {
+      const attendance=event.target.closest('[data-attendance-id]');
+      if(attendance){await saveAttendance(attendance.dataset.attendanceId,attendance.dataset.attendance);return;}
       const edit = event.target.closest("[data-edit-streamer]");
       if (edit) { openRegistration(edit.dataset.editStreamer); return; }
       const remove = event.target.closest("[data-remove-streamer]");
