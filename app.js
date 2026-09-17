@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=attendance-16";
-import { initAdminOps } from "./admin-ops.js?v=attendance-16";
+import { backend } from "./supabase-service.js?v=attendance-17";
+import { initAdminOps } from "./admin-ops.js?v=attendance-17";
 import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
