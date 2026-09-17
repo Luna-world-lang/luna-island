@@ -1,8 +1,10 @@
 import {balance, tiers, tierCost, parseCSV, aggregate} from './ops-core.js?v=backup-14';
 export function initAdminOps(backend, refresh) {
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const button=document.createElement('button'); button.id='open-admin-ops'; button.className='admin-button';button.hidden=true;button.textContent='팀 편성 · 집계 · 백업';
+  const button=document.createElement('button'); button.id='open-admin-ops'; button.className='admin-button';button.hidden=true;button.textContent='결과 집계 · 백업';
   document.querySelector('.site-header').append(button);
+  const rosterButton=document.createElement('button');rosterButton.id='open-team-roster';rosterButton.type='button';rosterButton.className='admin-button';rosterButton.hidden=true;rosterButton.textContent='출석 · 팀 편성';
+  document.querySelector('#page-leaderboard .leaderboard-controls').append(rosterButton);
   const dialog=document.createElement('dialog');dialog.id='admin-ops';dialog.setAttribute('aria-labelledby','ops-title');
   dialog.innerHTML=`<div class="drawer-header"><div><p class="eyebrow">LUNA ADMIN</p><h2 id="ops-title">대회 운영실</h2></div><button type="button" class="icon-button" id="ops-close" aria-label="운영실 닫기">×</button></div>
   <p id="ops-feedback" role="status"></p><div class="ops-tabs"><button data-tab="roster">출석 · 팀 편성</button><button data-tab="import">결과 가져오기</button><button data-tab="backup">백업 · 복원</button></div>
@@ -21,7 +23,7 @@ export function initAdminOps(backend, refresh) {
   let draft=[], data, revision, backups=[], busy=false, dirty=false, csv=null, preview=null, dragged=null, match=null, sourceGameId=null;
   const say=t=>{$('#ops-feedback').textContent=t;};
   const download=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);};
-  function auth() {button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){dialog.close();draft=[];data=null;csv=null;preview=null;match=null;sourceGameId=null;$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
+  function auth() {rosterButton.hidden=!backend.isAdmin;rosterButton.disabled=busy||!backend.ready;button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){dialog.close();draft=[];data=null;csv=null;preview=null;match=null;sourceGameId=null;$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
   function setBusy(value){busy=value;$$('button,input,select').forEach(e=>e.disabled=value);auth();}
   async function action(fn){if(busy||!backend.isAdmin)return;setBusy(true);try{await fn();}catch(e){say(e.message);}finally{setBusy(false);}}
   function invalidate(){dirty=true;preview=null;$('#ops-import-save').hidden=true;$('#ops-import-preview').replaceChildren();say('저장하지 않은 변경사항이 있습니다.');}
@@ -109,6 +111,8 @@ const down=e.target.closest('[data-download]'),restore=e.target.closest('[data-r
   $$('[data-tab]').forEach(b=>b.onclick=()=>{$$('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==b.dataset.tab);$$('[data-tab]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
   function close(){if(busy)return;if(dirty&&!confirm('저장하지 않은 변경사항을 버리고 닫을까요?'))return;dirty=false;dialog.close();}
   $('#ops-close').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
-  button.onclick=()=>{if(!backend.isAdmin)return;dialog.showModal();say('운영 정보를 불러오는 중…');action(async()=>{await load();say('저장된 출석·편성을 불러왔습니다.');});};
+  function openPanel(roster){if(!backend.isAdmin||busy||!backend.ready)return;$('#ops-title').textContent=roster?'출석 · 팀 편성':'결과 집계 · 백업';$('.ops-tabs').hidden=roster;$('[data-tab="roster"]').hidden=true;$('[data-tab="'+(roster?'roster':'import')+'"]').click();dialog.showModal();say('운영 정보를 불러오는 중…');action(async()=>{await load();say(roster?'저장된 출석·편성을 불러왔습니다.':'게임 결과를 가져오거나 백업을 관리하세요.');});}
+  button.onclick=()=>openPanel(false);
+  rosterButton.onclick=()=>openPanel(true);
   return {auth};
 }
