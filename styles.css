@@ -381,7 +381,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #ops-feedback { position:sticky; top:0; z-index:3; background:#1e1c35; padding:10px 14px; border-radius:9px; }
 @media(max-width:900px) { #ops-board { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { #admin-ops { padding:15px; } #ops-board { grid-template-columns:1fr; } .ops-tabs button { flex:1; padding:8px!important; } }
-.directory-attendance{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-top:1px solid #ffffff12;font-size:12px}
+.directory-attendance{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-top:1px solid #ffffff12;font-size:12px}
 .directory-attendance>span{color:#b8b8d3;margin-right:4px}
 .directory-attendance button{border:1px solid #ffffff24;border-radius:8px;padding:6px 10px;background:#ffffff08;color:#c9c9e5;cursor:pointer}
 .directory-attendance button[aria-pressed="true"]{border-color:#a78bfa;background:#a78bfa30;color:#fff}
