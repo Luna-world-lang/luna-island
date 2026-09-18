@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=history-purge-20";
-import { initAdminOps } from "./admin-ops.js?v=history-purge-20";
+import { backend } from "./supabase-service.js?v=results-21";
+import { initAdminOps } from "./admin-ops.js?v=results-21";
 import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
@@ -73,8 +73,6 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     if (!admin && $("#registration-dialog").open) $("#registration-dialog").close();
     $("#admin-login").hidden = admin;
     $("#admin-logout").hidden = !admin;
-    $("#open-score-panel").hidden = !admin;
-    $("#open-score-panel").disabled = !admin || !connected || busy;
     $$("#score-form input, #score-form select, #score-form button, #finalize-event, [data-delete-score]").forEach((el) => { el.disabled = !admin || !connected || busy; });
     if (!admin && $("#score-drawer").classList.contains("is-open")) closeDrawer();
   }
@@ -332,7 +330,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     $("#score-drawer").setAttribute("aria-hidden", "true");
     $("#drawer-backdrop").hidden = true;
     document.body.style.overflow = "";
-    $("#open-score-panel").focus();
+    $("#open-admin-ops").focus();
   }
 
   async function saveScore(event) {
@@ -507,7 +505,6 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     $("#score-team").innerHTML = teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join("");
     $$(".nav-link").forEach((button) => button.addEventListener("click", () => showPage(button.dataset.page)));
     $("[data-page-link]").addEventListener("click", (event) => { event.preventDefault(); showPage("dashboard"); });
-    $("#open-score-panel").addEventListener("click", openDrawer);
     $("#close-score-panel").addEventListener("click", closeDrawer);
     $("#drawer-backdrop").addEventListener("click", closeDrawer);
     document.addEventListener("keydown", (event) => { if (event.key === "Escape" && $("#score-drawer").classList.contains("is-open")) closeDrawer(); });
