@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=attendance-17";
-import { initAdminOps } from "./admin-ops.js?v=attendance-17";
+import { backend } from "./supabase-service.js?v=history-purge-19";
+import { initAdminOps } from "./admin-ops.js?v=history-purge-19";
 import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
@@ -244,7 +244,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     }
 
     $("#history-trash").hidden = !backend.isAdmin;
-    $("#history-trash-list").innerHTML = (state.trash || []).map(event => `<div class="history-trash-item">제 ${Number(event.number)}회 · ${escapeHtml(event.date)} <button type="button" data-history-action="restore" data-number="${Number(event.number)}">복구</button></div>`).join("") || "삭제한 기록이 없습니다.";
+    $("#history-trash-list").innerHTML = (state.trash || []).map(event => `<div class="history-trash-item">제 ${Number(event.number)}회 · ${escapeHtml(event.date)} <button type="button" data-history-action="restore" data-number="${Number(event.number)}">복구</button> <button type="button" data-history-action="purge" data-number="${Number(event.number)}">영구 삭제</button></div>`).join("") || "삭제한 기록이 없습니다.";
     const records = getIndividualRecords();
     const query = $("#player-search").value.trim().toLocaleLowerCase("ko");
     const filtered = records.filter((record) => record.name.toLocaleLowerCase("ko").includes(query));
@@ -380,8 +380,13 @@ import { tierCost } from "./ops-core.js?v=backup-14";
         $("#history-form-feedback").textContent = ""; $("#history-dialog").showModal(); return;
       }
       if (action === "delete" && !confirm('제 ' + number + '회 기록을 삭제할까요? 우승·개인 기록 집계에서 제외되며 삭제한 기록에서 복구할 수 있습니다.')) return;
+      if(action==='purge') {
+        if(!record.deleted)return;
+        const expected='제 '+number+'회 영구 삭제';
+        if(prompt('제 '+number+'회 ('+record.date+') 기록을 영구 삭제합니다. 삭제한 기록 목록에서 복구할 수 없습니다. 기존 백업 파일은 별도로 남습니다.\n계속하려면 다음 문구를 입력하세요: '+expected)!==expected)return;
+      }
       busy = true; renderAuth();
-      try { await backend.manageHistory(action,number,{},state.revision); $("#history-feedback").textContent = action === 'restore' ? '기록을 복구했습니다.' : '기록을 삭제했습니다. 아래에서 복구할 수 있습니다.'; }
+      try { await backend.manageHistory(action,number,{},state.revision); $("#history-feedback").textContent = action === 'purge' ? '기록을 영구 삭제했습니다.' : action === 'restore' ? '기록을 복구했습니다.' : '기록을 삭제했습니다. 아래에서 복구할 수 있습니다.'; }
       catch(error) { $("#history-feedback").textContent = error.message; }
       finally { busy = false; await refresh(); }
     });
