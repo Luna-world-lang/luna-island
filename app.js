@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=history-purge-19";
-import { initAdminOps } from "./admin-ops.js?v=history-purge-19";
+import { backend } from "./supabase-service.js?v=history-purge-20";
+import { initAdminOps } from "./admin-ops.js?v=history-purge-20";
 import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
@@ -27,6 +27,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
   let editingTeamsRevision = null;
   let teamOptionsSignature = "";
   let attendanceData = null;
+  let purgeTarget=null;
 
   function attendanceControls(record) {
     if (!backend.isAdmin) return "";
@@ -57,6 +58,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
   function renderAuth() {
     opsUI.auth();
     const admin = backend.isAdmin;
+    if(!admin&&$('#purge-dialog')?.open){$('#purge-dialog').close();purgeTarget=null;}
     $$('[data-attendance-id]').forEach(el=>{el.hidden=!admin;el.disabled=!admin||!connected||busy||!attendanceData;});
     if(!admin)attendanceData=null;
     if (!admin && $("#history-dialog").open) $("#history-dialog").close();
@@ -365,6 +367,19 @@ import { tierCost } from "./ops-core.js?v=backup-14";
   }
 
   function init() {
+    const purgeDialog=document.createElement('dialog');purgeDialog.id='purge-dialog';purgeDialog.setAttribute('aria-labelledby','purge-title');
+    purgeDialog.innerHTML='<form id="purge-form"><h2 id="purge-title">기록 영구 삭제</h2><p id="purge-description"></p><p>확인 문구: <strong id="purge-expected"></strong></p><label>확인 문구 입력<input id="purge-input" autocomplete="off" required></label><p id="purge-feedback" role="status"></p><button id="purge-cancel" type="button">취소</button> <button id="purge-submit" type="submit" disabled>영구 삭제 실행</button></form>';
+    document.body.append(purgeDialog);
+    $('#purge-cancel').onclick=()=>{if(!busy)purgeDialog.close();};
+    purgeDialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+    $('#purge-input').oninput=()=>{$('#purge-submit').disabled=busy||!backend.isAdmin||$('#purge-input').value!==purgeTarget?.expected;};
+    $('#purge-form').onsubmit=async event=>{
+      event.preventDefault();if(busy||!backend.isAdmin||!connected||!purgeTarget||$('#purge-input').value!==purgeTarget.expected)return;
+      busy=true;$('#purge-submit').disabled=true;$('#purge-cancel').disabled=true;renderAuth();
+      try{await backend.manageHistory('purge',purgeTarget.number,{},purgeTarget.revision);purgeDialog.close();purgeTarget=null;$('#history-feedback').textContent='기록을 영구 삭제했습니다.';}
+      catch(error){$('#purge-feedback').textContent=error.message;}
+      finally{busy=false;$('#purge-cancel').disabled=false;$('#purge-input').oninput();await refresh();}
+    };
     $("#close-history").addEventListener("click", () => $("#history-dialog").close());
     $("#page-champions").addEventListener("click", async event => {
       const button = event.target.closest("[data-history-action]");
@@ -383,7 +398,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
       if(action==='purge') {
         if(!record.deleted)return;
         const expected='제 '+number+'회 영구 삭제';
-        if(prompt('제 '+number+'회 ('+record.date+') 기록을 영구 삭제합니다. 삭제한 기록 목록에서 복구할 수 없습니다. 기존 백업 파일은 별도로 남습니다.\n계속하려면 다음 문구를 입력하세요: '+expected)!==expected)return;
+        purgeTarget={number,revision:state.revision,expected}; $('#purge-description').textContent='제 '+number+'회 ('+record.date+') 기록을 영구 삭제합니다. 삭제한 기록 목록에서 복구할 수 없습니다. 기존 백업은 별도로 남습니다.'; $('#purge-expected').textContent=expected; $('#purge-input').value=''; $('#purge-feedback').textContent=''; $('#purge-submit').disabled=true; $('#purge-dialog').showModal(); return;
       }
       busy = true; renderAuth();
       try { await backend.manageHistory(action,number,{},state.revision); $("#history-feedback").textContent = action === 'purge' ? '기록을 영구 삭제했습니다.' : action === 'restore' ? '기록을 복구했습니다.' : '기록을 삭제했습니다. 아래에서 복구할 수 있습니다.'; }
