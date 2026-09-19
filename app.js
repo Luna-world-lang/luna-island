@@ -1,5 +1,5 @@
-import { backend } from "./supabase-service.js?v=results-21";
-import { initAdminOps } from "./admin-ops.js?v=results-21";
+import { backend } from "./supabase-service.js?v=lifecycle-22";
+import { initAdminOps } from "./admin-ops.js?v=lifecycle-22";
 import { tierCost } from "./ops-core.js?v=backup-14";
 (() => {
   "use strict";
@@ -158,9 +158,11 @@ import { tierCost } from "./ops-core.js?v=backup-14";
   function getIndividualRecords() {
     const recordMap = new Map(state.streamers.map((streamer) => [streamer.name, { ...streamer, appearances: 0, wins: 0, topThree: 0, rankTotal: 0 }]));
     state.history.forEach((event) => {
-      event.standings.forEach((teamResult) => {
+      const counted=new Set();
+      [...event.standings].sort((a,b)=>a.rank-b.rank).forEach((teamResult) => {
         teamResult.members.forEach((name) => {
-          if (!recordMap.has(name)) return;
+          if (!recordMap.has(name)||counted.has(name)) return;
+          counted.add(name);
           const record = recordMap.get(name);
           record.appearances += 1;
           record.wins += teamResult.rank === 1 ? 1 : 0;
@@ -239,7 +241,8 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     } else {
       championRoot.innerHTML = [...state.history].reverse().map((event) => {
         const winner = event.standings[0];
-        return `<article class="champion-card"><span class="champion-round">제 ${event.number}회 루나섬</span><h3>${escapeHtml(winner.name)}</h3><p>${winner.members.map(escapeHtml).join(" · ")}</p><strong>${winner.points}점 · ${winner.kills}킬</strong><small>${escapeHtml(event.date)}</small>${backend.isAdmin ? `<div class="history-actions"><button type="button" data-history-action="edit" data-number="${event.number}">기록 수정</button><button type="button" data-history-action="delete" data-number="${event.number}">기록 삭제</button></div>` : ""}</article>`;
+        const rounds=Array.isArray(event.rounds)?`<details><summary>경기별 참가 명단</summary>${event.rounds.map(s=>`<p>${Number(s.round)}R · ${escapeHtml(event.standings.find(t=>t.id===s.teamId)?.name||s.teamId)} · ${Number(s.placement)}위 · ${Number(s.kills)}킬<br>${(s.members||[]).map(escapeHtml).join(' · ')||'참가 명단 없음'}</p>`).join('')}</details>`:'';
+        return `<article class="champion-card"><span class="champion-round">제 ${event.number}회 루나섬</span><h3>${escapeHtml(winner.name)}</h3><p>${winner.members.map(escapeHtml).join(" · ")}</p><strong>${winner.points}점 · ${winner.kills}킬</strong><small>${escapeHtml(event.date)}</small>${rounds}${backend.isAdmin ? `<div class="history-actions"><button type="button" data-history-action="edit" data-number="${event.number}">기록 수정</button><button type="button" data-history-action="delete" data-number="${event.number}">기록 삭제</button></div>` : ""}</article>`;
       }).join("");
     }
 

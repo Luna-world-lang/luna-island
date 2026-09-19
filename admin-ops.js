@@ -1,4 +1,5 @@
 import {balance, tiers, tierCost, parseCSV, aggregate} from './ops-core.js?v=backup-14';
+import {renderSavedRounds} from './saved-rounds.js?v=lifecycle-22';
 export function initAdminOps(backend, refresh) {
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const button=document.createElement('button'); button.id='open-admin-ops'; button.className='admin-button';button.hidden=true;button.textContent='결과 집계 · 백업';
@@ -15,12 +16,13 @@ export function initAdminOps(backend, refresh) {
   <label>결과 파일<input id="ops-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"></label><div id="ops-mapping" hidden>
   <div class="ops-toolbar"><label>행 기준<select id="ops-mode"><option value="player">선수별 개인 킬</option><option value="team">팀별 팀 킬</option></select></label><label>닉네임 / 팀 이름 열<select id="ops-col-name"></select></label><label>순위 열<select id="ops-col-rank"></select></label><label>킬 열<select id="ops-col-kills"></select></label><label>라운드<input id="ops-round" type="number" min="1" max="4" value="1"></label><label>킬당 점수<input id="ops-kill-point" type="number" min="0" max="9999" value="1"></label></div>
   <p>선수별 파일은 등록한 게임 닉네임과 정확히 일치해야 합니다. 같은 팀의 개인 킬을 합산합니다. 팀 킬이 선수마다 반복된 파일은 선수별 방식으로 넣지 마세요.</p><div class="ops-toolbar">${Array.from({length:8},(_,i)=>`<label>${i+1}위 점수<input data-placement="${i+1}" type="number" min="0" max="999999" placeholder="입력 필요"></label>`).join('')}</div>
-  <button id="ops-preview">집계 미리보기</button></div><div id="ops-import-preview"></div><button id="ops-import-save" class="primary-button" hidden>확인한 결과 저장</button><p class="drawer-help">동일 라운드·팀의 기존 점수는 교체합니다. 저장 전에 자동 백업하며, 대회 결과 확정은 아래에서 진행합니다.</p></section>
+  <button id="ops-preview">집계 미리보기</button></div><div id="ops-import-preview"></div><button id="ops-import-save" class="primary-button" hidden>확인한 결과 저장</button><p class="drawer-help">저장하면 해당 라운드 전체를 교체합니다. 저장 전에 자동 백업하며, 대회 결과 확정은 아래에서 진행합니다.</p></section>
   <section data-panel="backup" hidden><h3>기록을 안전하게 보관하세요</h3><p>현재 점수, 우승 기록, 스트리머 명단, 팀 이름, 출석·코스트·편성을 서버에 백업하고 JSON 파일로 내려받습니다. 프로필 사진은 주소만 포함됩니다.</p><button id="ops-backup" class="primary-button">현재 상태 백업 · 내려받기</button><p>복원하면 해당 시점의 전체 상태로 돌아갑니다. 복원 직전 상태도 자동 백업되어 되돌릴 수 있습니다. 보관 중인 백업은 최근 50개를 표시합니다. 삭제하면 휴지통으로 이동하며, 실제 경기 기록은 그대로 유지됩니다.</p><button id="ops-backup-reload">백업 목록 새로고침</button><div id="ops-backups"></div></section>`;
   document.body.append(dialog);
   const finalization=document.createElement('section');
-  finalization.innerHTML='<hr><h3>대회 결과 확정</h3><p id="ops-saved-summary"></p><button type="button" id="ops-finalize" class="primary-button">현재 결과를 기록으로 확정</button><p>저장한 경기 결과를 우승·개인 기록에 반영하고 다음 대회를 시작합니다.</p>';
+  finalization.innerHTML='<hr><h3>대회 결과 확정</h3><p id="ops-saved-summary"></p><button type="button" id="ops-finalize" class="primary-button">현재 결과를 기록으로 확정</button><p>저장한 경기 결과를 우승·개인 기록에 반영합니다. 다음 회차는 출석을 전원 미확인으로 바꾸고 팀 배정을 초기화합니다.</p>';
   dialog.querySelector('[data-panel="import"]').append(finalization);
+  const savedRounds=document.createElement('section');savedRounds.id='ops-saved-rounds';finalization.before(savedRounds);
   const $=s=>dialog.querySelector(s), $$=s=>[...dialog.querySelectorAll(s)];
   let backupList={active:[],trash:[],activeCount:0,trashCount:0};
   let draft=[], data, revision, backups=[], busy=false, dirty=false, csv=null, preview=null, dragged=null, match=null, sourceGameId=null;
@@ -38,6 +40,11 @@ export function initAdminOps(backend, refresh) {
     $('#ops-team-count').value=ops.data.teamCount||8;$('#ops-capacity').value=ops.data.capacity||3;
     dirty=false;preview=null;$('#ops-import-save').hidden=true;$('#ops-import-preview').replaceChildren();renderBoard();renderBackups();
     $('#ops-saved-summary').textContent='제 '+data.eventNumber+'회 · 저장된 경기 점수 '+data.scores.length+'건';
+    renderSavedRounds(savedRounds,data,(command,payload)=>action(async()=>{
+      if(dirty||preview)throw Error('먼저 편성 또는 집계 미리보기를 저장하세요.');
+      if(!confirm(payload.oldRound+'라운드 '+(command==='cancel'?'집계를 취소':'수정 내용을 저장')+'할까요? 변경 전 상태는 백업됩니다.'))return;
+      await backend.results(command,payload,revision);await load();await refresh();say(command==='cancel'?'라운드 집계를 취소했습니다. 백업에서 복원할 수 있습니다.':'경기 결과와 참가 명단을 수정했습니다.');
+    }));
   }
   function renderBackups(){
     const label=b=>esc(new Date(b.created_at).toLocaleString('ko-KR'))+' · '+esc(b.label);
@@ -100,18 +107,20 @@ export function initAdminOps(backend, refresh) {
   $('#ops-preview').onclick=()=>{try{
     clearPreview();if(dirty)throw Error('팀 편성을 먼저 저장해 주세요.');if(!csv)throw Error('결과 파일을 선택하세요.');
     preview=aggregate(csv,{name:Number($('#ops-col-name').value),rank:Number($('#ops-col-rank').value),kills:Number($('#ops-col-kills').value)},$('#ops-mode').value,data.streamers,data.teams,Number($('#ops-round').value),Object.fromEntries($$('[data-placement]').map(e=>[e.dataset.placement,e.value])),$('#ops-kill-point').value===''?NaN:Number($('#ops-kill-point').value));
-    if(sourceGameId){if(data.scores.some(s=>s.sourceGameId===sourceGameId&&s.round!==preview[0].round))throw Error('이 게임은 이미 다른 라운드에 집계되어 있습니다. 기존 점수를 확인하세요.');preview=preview.map(r=>({...r,sourceGameId}));}
+    preview=preview.map(r=>({...r,members:data.streamers.filter(p=>p.team_id===r.teamId).map(p=>p.name),rosterSource:'saved-team'}));
+    if(sourceGameId){if(data.scores.some(s=>s.sourceGameId===sourceGameId&&s.round!==preview[0].round))throw Error('이 게임은 이미 다른 라운드에 집계되어 있습니다. 기존 점수를 확인하세요.');preview=preview.map(r=>{const selects=$$('[data-game-team]');const index=selects.find(s=>s.value===r.teamId)?.dataset.gameTeam;const members=match.teams[Number(index)].members.map(m=>{const registered=data.streamers.filter(p=>p.game_nickname===m.nickname);return registered.length===1?registered[0].name:m.nickname;});return {...r,sourceGameId,members,rosterSource:'official-game'};});}
     $('#ops-import-preview').innerHTML=`${sourceGameId?'<p>게임 ID '+esc(sourceGameId)+'</p>':''}<div class="table-wrap"><table><thead><tr><th>라운드</th><th>팀</th><th>순위</th><th>킬</th><th>점수</th><th>처리</th></tr></thead><tbody>${preview.map(r=>`<tr><td>${r.round}R</td><td>${esc(data.teams.find(t=>t.id===r.teamId)?.name)}</td><td>${r.placement}</td><td>${r.kills}</td><td>${r.points}</td><td>${data.scores.some(s=>s.round===r.round&&s.teamId===r.teamId)?'기존 점수 교체':'새 점수'}</td></tr>`).join('')}</tbody></table></div>`;
-    $('#ops-import-save').hidden=false;say('집계 미리보기입니다. 저장할 팀과 점수를 확인하세요.');
+    $('#ops-import-preview').insertAdjacentHTML('beforeend','<h4>함께 보관할 경기 참가 명단</h4>'+preview.map(r=>'<p>'+esc(data.teams.find(t=>t.id===r.teamId)?.name)+' · '+(r.members.map(esc).join(' · ')||'명단 없음')+'</p>').join('')+'<p>게임 닉네임이 등록된 스트리머와 일치하면 스트리머 이름으로 보관합니다. 미등록 닉네임은 저장한 경기 수정에서 연결할 수 있습니다.</p>');
+    $('#ops-import-save').hidden=false;say('집계 미리보기입니다. 저장할 팀·점수·참가 명단을 확인하세요.');
   }catch(e){preview=null;say(e.message);}};
-  $('#ops-import-save').onclick=()=>action(async()=>{if(!preview)return;if(!confirm('미리보기의 결과를 저장할까요? 동일 라운드·팀 점수는 교체되며 변경 전 상태는 자동 백업됩니다.'))return;await backend.ops('import',{scores:preview},revision);await load();await refresh();say('결과를 집계해 저장했습니다.');});
+  $('#ops-import-save').onclick=()=>action(async()=>{if(!preview)return;if(!confirm('미리보기의 결과와 참가 명단을 저장할까요? 해당 라운드 전체를 교체하며 변경 전 상태는 자동 백업됩니다.'))return;await backend.results('import',{scores:preview},revision);await load();await refresh();say('결과와 경기 당시 참가 명단을 저장했습니다.');});
   $('#ops-backup').onclick=()=>action(async()=>{if(dirty)throw Error('편성을 먼저 저장해 주세요.');const result=await backend.ops('backup',{},revision);download(result.data,'luna-backup-'+result.id+'.json');await load();say('서버에 백업했습니다. JSON 내려받기도 시작했습니다.');});
   $('#ops-backup-reload').onclick=()=>action(async()=>{await reloadBackups();say('백업 목록을 새로고침했습니다.');});
   $('#ops-finalize').onclick=()=>action(async()=>{
     if(dirty||preview)throw Error('저장하지 않은 편성 또는 집계 미리보기가 있습니다. 먼저 저장하세요.');
     if(!data?.scores.length)throw Error('먼저 경기 결과를 가져와 저장하세요.');
     if(!confirm('제 '+data.eventNumber+'회 저장된 점수 '+data.scores.length+'건으로 결과를 확정하고 다음 대회를 시작할까요?'))return;
-    await backend.mutate('finalize',{},revision);await load();await refresh();say('결과를 확정했습니다. 우승 기록과 개인 기록에서 확인할 수 있습니다.');
+    await backend.results('finalize',{},revision);await load();await refresh();say('결과를 확정했습니다. 다음 회차 출석은 전원 미확인으로 초기화했습니다.');
   });
   $('#ops-backups').onclick=e=>action(async()=>{
     const remove=e.target.closest('[data-backup-delete]'), recover=e.target.closest('[data-backup-recover]');

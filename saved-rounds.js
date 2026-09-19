@@ -1,0 +1,13 @@
+export function renderSavedRounds(root,data,onAction) {
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const rounds=[...new Set(data.scores.map(s=>s.round))].sort((a,b)=>a-b);
+ root.innerHTML='<h3>저장한 경기 · 수정 및 취소</h3><p>수정·취소 전 자동 백업합니다. 참가 명단은 경기 당시 스트리머 이름을 쉼표로 구분해 입력하세요. 수정 저장은 해당 라운드 전체를 교체합니다.</p>'+(rounds.map(round=>{
+  const scores=data.scores.filter(s=>s.round===round);
+  return `<details data-saved-round="${round}"><summary>${round}라운드 · ${scores.length}팀 · 게임 ${esc(scores[0].sourceGameId||'ID 없음')}</summary><form><label>라운드<input name="round" type="number" min="1" max="4" value="${round}" required></label><label>게임 ID (없으면 비워두세요)<input name="gameId" inputmode="numeric" pattern="[1-9][0-9]{0,11}" value="${esc(scores[0].sourceGameId||'')}"></label>${scores.map((s,i)=>`<fieldset data-score-index="${i}"><legend>${esc(data.teams.find(t=>t.id===s.teamId)?.name)}</legend><label>연결 팀<select name="team">${data.teams.map(t=>`<option value="${esc(t.id)}" ${s.teamId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></label><div class="ops-toolbar">${[['placement','순위',1,8],['kills','킬',0,999999],['points','점수',0,999999]].map(([key,label,min,max])=>`<label>${label}<input name="${key}" type="number" min="${min}" max="${max}" value="${s[key]}" required></label>`).join('')}</div><label>경기 당시 참가자<input name="members" value="${esc((s.members||data.streamers.filter(p=>p.team_id===s.teamId).map(p=>p.name)).join(', '))}"></label>${!s.members?'<p>이전 기록에는 참가 명단이 없습니다. 현재 편성으로 표시했으니 당시 참가자를 확인·수정한 뒤 저장하세요.</p>':''}</fieldset>`).join('')}<button type="submit">수정 저장</button> <button type="button" data-cancel-round>이 라운드 집계 취소</button></form></details>`;
+ }).join('')||'<p>저장된 경기가 없습니다.</p>');
+ root.querySelectorAll('[data-saved-round]').forEach(section=>{
+  const oldRound=Number(section.dataset.savedRound),old=data.scores.filter(s=>s.round===oldRound),form=section.querySelector('form');
+  form.onsubmit=e=>{e.preventDefault();const round=Number(form.elements.round.value),gameId=form.elements.gameId.value.trim();const scores=[...form.querySelectorAll('fieldset')].map((field,i)=>{const row={...old[i],round,teamId:field.querySelector('[name=team]').value,members:field.querySelector('[name=members]').value.split(',').map(x=>x.trim()).filter(Boolean),rosterSource:'admin-reviewed',updatedAt:new Date().toISOString()};for(const key of ['placement','kills','points'])row[key]=Number(field.querySelector(`[name=${key}]`).value);delete row.sourceGameId;if(gameId)row.sourceGameId=gameId;return row;});onAction('edit',{oldRound,scores});};
+  section.querySelector('[data-cancel-round]').onclick=()=>onAction('cancel',{oldRound});
+ });
+}

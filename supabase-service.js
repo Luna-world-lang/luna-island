@@ -102,6 +102,11 @@ export const backend = {
     const { error } = await client.from("luna_streamers").delete().eq("id", id);
     if (error) throw new Error("등록을 삭제하지 못했습니다. 다시 시도해 주세요.");
   },
+  async results(action,payload,revision) {
+    if(!this.isAdmin)throw Error('관리자 로그인이 필요합니다.');
+    const {error}=await client.rpc('luna_results',{p_action:action,p_payload:payload,p_revision:revision});
+    if(error){const messages={revision_conflict:'다른 화면에서 변경되었습니다. 운영실을 다시 열어 주세요.',round_occupied:'옮길 라운드에 이미 결과가 있습니다.',duplicate_game:'이 게임 ID는 다른 라운드에 저장되어 있습니다.',duplicate_members:'한 라운드에 같은 참가자가 중복되었습니다.',roster_missing:'이전 경기의 참가 명단을 먼저 확인하고 수정 저장하세요.'};throw Error(Object.entries(messages).find(([key])=>error.message.includes(key))?.[1]||'저장하지 못했습니다. 순위·팀 중복과 참가 명단을 확인하세요.');}
+  },
   async mutate(action, payload, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const { data: user, error: userError } = await client.auth.getUser();
