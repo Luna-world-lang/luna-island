@@ -2,6 +2,7 @@ import { backend } from "./supabase-service.js?v=lifecycle-22";
 import { initAdminOps } from "./admin-ops.js?v=personal-23";
 import { tierCost } from "./ops-core.js?v=backup-14";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=personal-23";
+import { championPage, championLeaders } from "./champion-records.js?v=champions-24";
 (() => {
   "use strict";
 
@@ -30,6 +31,7 @@ import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=pe
   let attendanceData = null;
   let purgeTarget=null;
   let personalSort = {key:'name', direction:'asc'};
+  let historyPage=1;
 
   function attendanceControls(record) {
     if (!backend.isAdmin) return "";
@@ -238,11 +240,16 @@ import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=pe
 
   function renderRecords() {
     const championRoot = $("#champion-records");
+    const page=championPage(state.history,historyPage);historyPage=page.page;
+    $('#champion-page-status').textContent=`전체 ${page.total}개 · ${page.page} / ${page.pages} 페이지`;
+    const start=Math.max(1,Math.min(page.page-2,page.pages-4));
+    $('#champion-pagination').innerHTML=page.total ? `<button type="button" data-history-page="1" ${page.page===1?'disabled':''}>처음</button><button type="button" data-history-page="${page.page-1}" ${page.page===1?'disabled':''}>이전</button>${Array.from({length:Math.min(5,page.pages)},(_,i)=>start+i).map(n=>`<button type="button" data-history-page="${n}" aria-label="${n}페이지" ${n===page.page?'aria-current="page"':''}>${n}</button>`).join('')}<button type="button" data-history-page="${page.page+1}" ${page.page===page.pages?'disabled':''}>다음</button><button type="button" data-history-page="${page.pages}" ${page.page===page.pages?'disabled':''}>마지막</button>`:'';
+    $('#champion-leaders').innerHTML=championLeaders(state.history).map(p=>`<li class="champion-leader"><span class="champion-leader-rank">${p.rank}</span><strong>${escapeHtml(p.name)}</strong><span>${p.wins}회 우승</span></li>`).join('')||'<li class="drawer-help">아직 확정된 우승자가 없습니다.</li>';
     if (!state.history.length) {
       championRoot.innerHTML = $("#empty-state-template").innerHTML;
     } else {
-      championRoot.innerHTML = [...state.history].reverse().map((event) => {
-        const winner = event.standings[0];
+      championRoot.innerHTML = page.events.map((event) => {
+        const winner = event.standings.find(t=>Number(t.rank)===1)||event.standings[0];
         const rounds=Array.isArray(event.rounds)?`<details><summary>경기별 참가 명단</summary>${event.rounds.map(s=>`<p>${Number(s.round)}R · ${escapeHtml(event.standings.find(t=>t.id===s.teamId)?.name||s.teamId)} · ${Number(s.placement)}위 · ${Number(s.kills)}킬<br>${(s.members||[]).map(escapeHtml).join(' · ')||'참가 명단 없음'}</p>`).join('')}</details>`:'';
         return `<article class="champion-card"><span class="champion-round">제 ${event.number}회 루나섬</span><h3>${escapeHtml(winner.name)}</h3><p>${winner.members.map(escapeHtml).join(" · ")}</p><strong>${winner.points}점 · ${winner.kills}킬</strong><small>${escapeHtml(event.date)}</small>${rounds}${backend.isAdmin ? `<div class="history-actions"><button type="button" data-history-action="edit" data-number="${event.number}">기록 수정</button><button type="button" data-history-action="delete" data-number="${event.number}">기록 삭제</button></div>` : ""}</article>`;
       }).join("");
@@ -524,6 +531,12 @@ import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=pe
     $("#score-log").addEventListener("click", (event) => { const button = event.target.closest("[data-delete-score]"); if (button) deleteScore(button.dataset.deleteScore); });
     $("#finalize-event").addEventListener("click", finalizeEvent);
     $("#player-search").addEventListener("input", renderRecords);
+    $('#champion-pagination').addEventListener('click',e=>{
+      const button=e.target.closest('[data-history-page]');if(!button||button.disabled)return;
+      historyPage=Number(button.dataset.historyPage);renderRecords();
+      $('#champion-pagination').querySelector(`[data-history-page="${historyPage}"][aria-current]`)?.focus({preventScroll:true});
+      $('#champion-history-heading').scrollIntoView({block:'start'});
+    });
     $$('[data-personal-sort]').forEach(button => button.addEventListener('click', () => {
       const key=button.dataset.personalSort;
       personalSort={key,direction:personalSort.key===key?(personalSort.direction==='asc'?'desc':'asc'):['name','tier','averageRank'].includes(key)?'asc':'desc'};
