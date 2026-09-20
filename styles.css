@@ -388,3 +388,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .directory-attendance button[data-attendance="present"][aria-pressed="true"]{border-color:#6ee7b7;background:#6ee7b720}
 .directory-attendance button[data-attendance="absent"][aria-pressed="true"]{border-color:#fda4af;background:#fda4af20}
 .directory-attendance button:disabled{opacity:.5;cursor:wait}
+
+.personal-table th button{background:none;border:0;color:inherit;font:inherit;font-weight:700;padding:8px 0;cursor:pointer;white-space:nowrap}
+.personal-table th button span{color:#bca6ff;margin-left:5px}
+.personal-table th button:focus-visible{outline:2px solid #bca6ff;outline-offset:4px;border-radius:3px}
+.personal-table th[aria-sort="ascending"],.personal-table th[aria-sort="descending"]{color:#dfd3ff}
+#personal-record-note{padding:12px 16px;line-height:1.7}

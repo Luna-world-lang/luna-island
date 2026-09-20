@@ -19,6 +19,23 @@ export function initAdminOps(backend, refresh) {
   <button id="ops-preview">집계 미리보기</button></div><div id="ops-import-preview"></div><button id="ops-import-save" class="primary-button" hidden>확인한 결과 저장</button><p class="drawer-help">저장하면 해당 라운드 전체를 교체합니다. 저장 전에 자동 백업하며, 대회 결과 확정은 아래에서 진행합니다.</p></section>
   <section data-panel="backup" hidden><h3>기록을 안전하게 보관하세요</h3><p>현재 점수, 우승 기록, 스트리머 명단, 팀 이름, 출석·코스트·편성을 서버에 백업하고 JSON 파일로 내려받습니다. 프로필 사진은 주소만 포함됩니다.</p><button id="ops-backup" class="primary-button">현재 상태 백업 · 내려받기</button><p>복원하면 해당 시점의 전체 상태로 돌아갑니다. 복원 직전 상태도 자동 백업되어 되돌릴 수 있습니다. 보관 중인 백업은 최근 50개를 표시합니다. 삭제하면 휴지통으로 이동하며, 실제 경기 기록은 그대로 유지됩니다.</p><button id="ops-backup-reload">백업 목록 새로고침</button><div id="ops-backups"></div></section>`;
   document.body.append(dialog);
+  const purgeDialog=document.createElement('dialog');purgeDialog.id='backup-purge-dialog';purgeDialog.setAttribute('aria-labelledby','backup-purge-title');
+  purgeDialog.innerHTML='<form><h2 id="backup-purge-title">백업 영구 삭제</h2><p id="backup-purge-detail"></p><p>이 백업은 휴지통에서도 복구할 수 없습니다. 현재 경기 기록은 바뀌지 않습니다.</p><label>확인 문구: <strong>백업 영구 삭제</strong><input id="backup-purge-confirm" autocomplete="off" placeholder="백업 영구 삭제"></label><p id="backup-purge-error" role="status"></p><button type="button" id="backup-purge-cancel">취소</button> <button type="submit" id="backup-purge-submit" disabled>영구 삭제</button></form>';
+  document.body.append(purgeDialog);
+  let purgeBackup=null;
+  const purgeInput=purgeDialog.querySelector('input'), purgeSubmit=purgeDialog.querySelector('[type="submit"]');
+  const updatePurge=()=>{purgeSubmit.disabled=busy||!backend.isAdmin||!purgeBackup||purgeInput.value!=='백업 영구 삭제';};
+  purgeInput.oninput=updatePurge;
+  purgeDialog.querySelector('#backup-purge-cancel').onclick=()=>{if(!busy)purgeDialog.close();};
+  purgeDialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+  purgeDialog.addEventListener('close',()=>{purgeBackup=null;purgeInput.value='';updatePurge();});
+  purgeDialog.querySelector('form').onsubmit=async e=>{
+    e.preventDefault();if(busy||!backend.isAdmin||!purgeBackup||purgeInput.value!=='백업 영구 삭제')return;
+    const id=purgeBackup.id;setBusy(true);purgeInput.disabled=true;purgeSubmit.disabled=true;
+    try{backupList=await backend.manageBackup('purge',id);backups=backupList.active;renderBackups();purgeDialog.close();say('선택한 백업을 영구 삭제했습니다.');}
+    catch(error){purgeDialog.querySelector('#backup-purge-error').textContent=error.message;}
+    finally{setBusy(false);purgeInput.disabled=false;updatePurge();}
+  };
   const finalization=document.createElement('section');
   finalization.innerHTML='<hr><h3>대회 결과 확정</h3><p id="ops-saved-summary"></p><button type="button" id="ops-finalize" class="primary-button">현재 결과를 기록으로 확정</button><p>저장한 경기 결과를 우승·개인 기록에 반영합니다. 다음 회차는 출석을 전원 미확인으로 바꾸고 팀 배정을 초기화합니다.</p>';
   dialog.querySelector('[data-panel="import"]').append(finalization);
@@ -28,7 +45,7 @@ export function initAdminOps(backend, refresh) {
   let draft=[], data, revision, backups=[], busy=false, dirty=false, csv=null, preview=null, dragged=null, match=null, sourceGameId=null;
   const say=t=>{$('#ops-feedback').textContent=t;};
   const download=(obj,name)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);};
-  function auth() {rosterButton.hidden=!backend.isAdmin;rosterButton.disabled=busy||!backend.ready;button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){dialog.close();draft=[];data=null;csv=null;preview=null;match=null;sourceGameId=null;$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
+  function auth() {rosterButton.hidden=!backend.isAdmin;rosterButton.disabled=busy||!backend.ready;button.hidden=!backend.isAdmin;button.disabled=busy||!backend.ready;if(!backend.isAdmin){purgeDialog.close();purgeBackup=null;dialog.close();draft=[];data=null;csv=null;preview=null;match=null;sourceGameId=null;$('#ops-game-teams').replaceChildren();$('#ops-game-apply').hidden=true;$('#ops-board').replaceChildren();$('#ops-backups').replaceChildren();$('#ops-import-preview').replaceChildren();$('#ops-file').value='';$('#ops-mapping').hidden=true;$('#ops-import-save').hidden=true;}}
   function setBusy(value){busy=value;$$('button,input,select').forEach(e=>e.disabled=value);auth();}
   async function action(fn){if(busy||!backend.isAdmin)return;setBusy(true);try{await fn();}catch(e){say(e.message);}finally{setBusy(false);}}
   function invalidate(){dirty=true;preview=null;$('#ops-import-save').hidden=true;$('#ops-import-preview').replaceChildren();say('저장하지 않은 변경사항이 있습니다.');}
@@ -48,7 +65,7 @@ export function initAdminOps(backend, refresh) {
   }
   function renderBackups(){
     const label=b=>esc(new Date(b.created_at).toLocaleString('ko-KR'))+' · '+esc(b.label);
-    $('#ops-backups').innerHTML='<p>보관 '+backupList.activeCount+'개 · 휴지통 '+backupList.trashCount+'개</p>'+(backups.map(b=>`<article class="ops-backup-row"><span>${label(b)}</span><button data-download="${esc(b.id)}">내려받기</button><button data-restore="${esc(b.id)}">이 백업으로 복원</button><button data-backup-delete="${esc(b.id)}">백업 삭제</button></article>`).join('')||'<p>보관 중인 백업이 없습니다.</p>')+`<details><summary>휴지통 · 삭제한 백업 복구</summary><p>최근 삭제한 50개를 표시합니다. 되돌리기는 백업을 목록으로 돌려놓으며 경기 기록은 바꾸지 않습니다.</p>${backupList.trash.map(b=>`<article class="ops-backup-row"><span>${label(b)}</span><button data-backup-recover="${esc(b.id)}">백업 되돌리기</button></article>`).join('')||'<p>휴지통이 비어 있습니다.</p>'}</details>`;
+    $('#ops-backups').innerHTML='<p>보관 '+backupList.activeCount+'개 · 휴지통 '+backupList.trashCount+'개</p>'+(backups.map(b=>`<article class="ops-backup-row"><span>${label(b)}</span><button data-download="${esc(b.id)}">내려받기</button><button data-restore="${esc(b.id)}">이 백업으로 복원</button><button data-backup-delete="${esc(b.id)}">백업 삭제</button></article>`).join('')||'<p>보관 중인 백업이 없습니다.</p>')+`<details><summary>휴지통 · 삭제한 백업 복구</summary><p>최근 삭제한 50개를 표시합니다. 되돌리기는 백업을 목록으로 돌려놓으며 경기 기록은 바꾸지 않습니다.</p>${backupList.trash.map(b=>`<article class="ops-backup-row"><span>${label(b)}</span><button data-backup-recover="${esc(b.id)}">백업 되돌리기</button><button data-backup-purge="${esc(b.id)}">영구 삭제</button></article>`).join('')||'<p>휴지통이 비어 있습니다.</p>'}</details>`;
   }
   async function reloadBackups(){backupList=await backend.manageBackup('list');backups=backupList.active;renderBackups();}
   function renderBoard(){
@@ -123,6 +140,8 @@ export function initAdminOps(backend, refresh) {
     await backend.results('finalize',{},revision);await load();await refresh();say('결과를 확정했습니다. 다음 회차 출석은 전원 미확인으로 초기화했습니다.');
   });
   $('#ops-backups').onclick=e=>action(async()=>{
+    const purge=e.target.closest('[data-backup-purge]');
+    if(purge){purgeBackup=backupList.trash.find(b=>b.id===purge.dataset.backupPurge);if(!purgeBackup)return;purgeInput.value='';purgeDialog.querySelector('#backup-purge-detail').textContent=new Date(purgeBackup.created_at).toLocaleString('ko-KR')+' · '+purgeBackup.label;purgeDialog.querySelector('#backup-purge-error').textContent='';updatePurge();purgeDialog.showModal();return;}
     const remove=e.target.closest('[data-backup-delete]'), recover=e.target.closest('[data-backup-recover]');
     if(remove||recover){backupList=await backend.manageBackup(remove?'delete':'recover',remove?.dataset.backupDelete||recover.dataset.backupRecover);backups=backupList.active;renderBackups();say(remove?'백업을 휴지통으로 이동했습니다. 휴지통에서 되돌릴 수 있습니다.':'백업을 보관 목록으로 되돌렸습니다.');return;}
 const down=e.target.closest('[data-download]'),restore=e.target.closest('[data-restore]');if(down){download(await backend.ops('download',{id:down.dataset.download}),'luna-backup-'+down.dataset.download+'.json');say('백업 파일 내려받기를 시작했습니다.');}if(restore){if(!confirm('이 백업 시점으로 전체 기록·명단·편성을 복원할까요? 현재 상태는 자동 백업되어 되돌릴 수 있습니다.'))return;await backend.ops('restore',{id:restore.dataset.restore},revision);await load();await refresh();say('백업을 복원했습니다. 이전 상태도 자동 백업에 남아 있습니다.');}});

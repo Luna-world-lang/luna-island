@@ -1,6 +1,7 @@
 import { backend } from "./supabase-service.js?v=lifecycle-22";
-import { initAdminOps } from "./admin-ops.js?v=lifecycle-22";
+import { initAdminOps } from "./admin-ops.js?v=personal-23";
 import { tierCost } from "./ops-core.js?v=backup-14";
+import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=personal-23";
 (() => {
   "use strict";
 
@@ -28,6 +29,7 @@ import { tierCost } from "./ops-core.js?v=backup-14";
   let teamOptionsSignature = "";
   let attendanceData = null;
   let purgeTarget=null;
+  let personalSort = {key:'name', direction:'asc'};
 
   function attendanceControls(record) {
     if (!backend.isAdmin) return "";
@@ -250,8 +252,15 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     $("#history-trash-list").innerHTML = (state.trash || []).map(event => `<div class="history-trash-item">제 ${Number(event.number)}회 · ${escapeHtml(event.date)} <button type="button" data-history-action="restore" data-number="${Number(event.number)}">복구</button> <button type="button" data-history-action="purge" data-number="${Number(event.number)}">영구 삭제</button></div>`).join("") || "삭제한 기록이 없습니다.";
     const records = getIndividualRecords();
     const query = $("#player-search").value.trim().toLocaleLowerCase("ko");
-    const filtered = records.filter((record) => record.name.toLocaleLowerCase("ko").includes(query));
-    $("#personal-record-body").innerHTML = filtered.map((record) => `<tr><td class="team-name">${escapeHtml(record.name)}</td><td>${record.appearances}회</td><td>${record.wins}회</td><td>${record.topThree}회</td><td>${record.averageRank ? `${record.averageRank.toFixed(2)}위` : "—"}</td></tr>`).join("");
+    const personal = personalRecords(state.streamers, state.history);
+    const filtered = sortPersonalRecords(personal.records.filter(record => record.name.toLocaleLowerCase('ko').includes(query)), personalSort.key, personalSort.direction);
+    $("#personal-record-body").innerHTML = filtered.map(record => `<tr><td class="team-name">${escapeHtml(record.name)}</td><td>${escapeHtml(record.tier || '미등록')}</td><td>${record.games}</td><td>${record.wins}</td><td>${record.winRate === null ? '—' : record.winRate.toFixed(1)+'%'}</td><td>${record.averageRank === null ? '—' : record.averageRank.toFixed(2)+'위'}</td></tr>`).join('') || '<tr><td colspan="6">검색 결과가 없습니다.</td></tr>';
+    $('#personal-record-note').textContent = '확정된 대회의 경기별 기록 기준 · 우승은 경기 1위 · 승률 = 우승 ÷ 총게임. '+(personal.excludedEvents ? `경기별 정보가 없는 이전 대회 ${personal.excludedEvents}개는 집계에서 제외됩니다.` : '경기 기록이 없는 선수의 승률·평균 순위는 —로 표시합니다.');
+    $$('[data-personal-sort]').forEach(button => {
+      const active=button.dataset.personalSort===personalSort.key;
+      button.closest('th').setAttribute('aria-sort',active?(personalSort.direction==='asc'?'ascending':'descending'):'none');
+      button.querySelector('span').textContent=active?(personalSort.direction==='asc'?'↑':'↓'):'↕';
+    });
 
     renderLeaderboard(records);
     if (selectedPlayer !== null && $("#player-dialog").open) renderPlayerDetail();
@@ -515,6 +524,11 @@ import { tierCost } from "./ops-core.js?v=backup-14";
     $("#score-log").addEventListener("click", (event) => { const button = event.target.closest("[data-delete-score]"); if (button) deleteScore(button.dataset.deleteScore); });
     $("#finalize-event").addEventListener("click", finalizeEvent);
     $("#player-search").addEventListener("input", renderRecords);
+    $$('[data-personal-sort]').forEach(button => button.addEventListener('click', () => {
+      const key=button.dataset.personalSort;
+      personalSort={key,direction:personalSort.key===key?(personalSort.direction==='asc'?'desc':'asc'):['name','tier','averageRank'].includes(key)?'asc':'desc'};
+      renderRecords();
+    }));
     $("#admin-login").addEventListener("click", () => $("#login-dialog").showModal());
     $("#close-login").addEventListener("click", () => $("#login-dialog").close());
     $("#login-dialog").addEventListener("close", () => { $("#login-password").value = ""; $("#login-feedback").textContent = ""; });
