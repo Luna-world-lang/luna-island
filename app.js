@@ -32,6 +32,38 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   let purgeTarget=null;
   let personalSort = {key:'name', direction:'asc'};
   let historyPage=1;
+  let bulkAttendanceDraft=null;
+
+  async function openBulkAttendance(status) {
+    if(!backend.isAdmin||!connected||busy||!['pending','present','absent'].includes(status))return;
+    busy=true;renderAuth();
+    try {
+      const ops=await backend.ops('read'), current=await backend.read();
+      if(ops.revision!==current.revision)throw Error('다른 화면에서 변경되었습니다. 다시 시도하세요.');
+      if(!current.streamers.length)throw Error('등록된 스트리머가 없습니다.');
+      const label={pending:'미확인',present:'출석',absent:'결석'}[status];
+      const players=current.streamers.map(p=>({id:p.id,tier:p.tier||'',cost:ops.data.players?.find(x=>x.id===p.id)?.cost??tierCost(p.tier),attendance:status,team:status==='present'?(p.team_id||''):''}));
+      bulkAttendanceDraft={players,capacity:ops.data.capacity||3,teamCount:ops.data.teamCount||8,revision:ops.revision,label};
+      const removed=status==='present'?0:current.streamers.filter(p=>p.team_id).length;
+      $('#bulk-attendance-description').textContent=`검색·팀 필터와 관계없이 등록된 전체 ${players.length}명을 ${label}으로 변경합니다. `+(removed?`현재 팀에 배정된 ${removed}명의 팀 배정도 해제됩니다.`:status==='present'?'기존 팀 배정은 유지됩니다.':'팀 배정은 비워집니다.');
+      $('#bulk-attendance-feedback').textContent='';
+      $('#bulk-attendance-dialog').showModal();
+    } catch(error){$('#directory-feedback').textContent=error.message;}
+    finally{busy=false;renderAuth();}
+  }
+
+  async function applyBulkAttendance(event) {
+    event.preventDefault();
+    if(!backend.isAdmin||!connected||busy||!bulkAttendanceDraft)return;
+    const {revision,label,...payload}=bulkAttendanceDraft;
+    busy=true;renderAuth();
+    try {
+      await backend.ops('save',payload,revision);
+      $('#bulk-attendance-dialog').close();bulkAttendanceDraft=null;
+      $('#directory-feedback').textContent=`전체 ${payload.players.length}명을 ${label}으로 저장했습니다. 팀 편성에도 반영됩니다.`;
+    } catch(error){bulkAttendanceDraft=null;$('#bulk-attendance-feedback').textContent=error.message+' 창을 닫고 다시 시도해 주세요.';}
+    finally{busy=false;await refresh();}
+  }
 
   function attendanceControls(record) {
     if (!backend.isAdmin) return "";
@@ -62,6 +94,11 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   function renderAuth() {
     opsUI.auth();
     const admin = backend.isAdmin;
+    $('#bulk-attendance-controls').hidden=!admin;
+    $$('[data-bulk-attendance]').forEach(el=>{el.disabled=!admin||!connected||busy||!attendanceData||!state.streamers.length;});
+    $('#bulk-attendance-submit').disabled=!admin||!connected||busy||!bulkAttendanceDraft;
+    $('#bulk-attendance-cancel').disabled=busy;
+    if(!admin){$('#bulk-attendance-dialog').close();bulkAttendanceDraft=null;}
     if(!admin&&$('#purge-dialog')?.open){$('#purge-dialog').close();purgeTarget=null;}
     $$('[data-attendance-id]').forEach(el=>{el.hidden=!admin;el.disabled=!admin||!connected||busy||!attendanceData;});
     if(!admin)attendanceData=null;
@@ -465,6 +502,11 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       $("#registration-dialog").showModal();
     };
     $("#register-streamer").addEventListener("click", () => openRegistration());
+    $$('[data-bulk-attendance]').forEach(button=>button.addEventListener('click',()=>openBulkAttendance(button.dataset.bulkAttendance)));
+    $('#bulk-attendance-form').addEventListener('submit',applyBulkAttendance);
+    $('#bulk-attendance-cancel').addEventListener('click',()=>{if(!busy)$('#bulk-attendance-dialog').close();});
+    $('#bulk-attendance-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+    $('#bulk-attendance-dialog').addEventListener('close',()=>{bulkAttendanceDraft=null;});
     let previewUrl;
     $("#registration-profile").addEventListener("change", () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
