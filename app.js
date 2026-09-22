@@ -34,7 +34,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   let historyPage=1;
   let bulkAttendanceDraft=null;
 
-  async function openBulkAttendance(status) {
+  async function openBulkAttendance(status, tier=null) {
     if(!backend.isAdmin||!connected||busy||!['pending','present','absent'].includes(status))return;
     busy=true;renderAuth();
     try {
@@ -42,10 +42,17 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       if(ops.revision!==current.revision)throw Error('다른 화면에서 변경되었습니다. 다시 시도하세요.');
       if(!current.streamers.length)throw Error('등록된 스트리머가 없습니다.');
       const label={pending:'미확인',present:'출석',absent:'결석'}[status];
-      const players=current.streamers.map(p=>({id:p.id,tier:p.tier||'',cost:ops.data.players?.find(x=>x.id===p.id)?.cost??tierCost(p.tier),attendance:status,team:status==='present'?(p.team_id||''):''}));
-      bulkAttendanceDraft={players,capacity:ops.data.capacity||3,teamCount:ops.data.teamCount||8,revision:ops.revision,label};
-      const removed=status==='present'?0:current.streamers.filter(p=>p.team_id).length;
-      $('#bulk-attendance-description').textContent=`검색·팀 필터와 관계없이 등록된 전체 ${players.length}명을 ${label}으로 변경합니다. `+(removed?`현재 팀에 배정된 ${removed}명의 팀 배정도 해제됩니다.`:status==='present'?'기존 팀 배정은 유지됩니다.':'팀 배정은 비워집니다.');
+      const targets=current.streamers.filter(p=>tier===null||(p.tier||'')===tier);
+      if(!targets.length)throw Error('선택한 티어에 등록된 스트리머가 없습니다.');
+      const scope=tier===null?'전체':tier?`${tier} 티어`:'티어 미등록';
+      const players=current.streamers.map(p=>{
+        const old=ops.data.players?.find(x=>x.id===p.id), selected=tier===null||(p.tier||'')===tier;
+        return {id:p.id,tier:p.tier||'',cost:old?.cost??tierCost(p.tier),attendance:selected?status:(old?.attendance||(p.team_id?'present':'pending')),team:selected&&status!=='present'?'':(p.team_id||'')};
+      });
+      bulkAttendanceDraft={players,capacity:ops.data.capacity||3,teamCount:ops.data.teamCount||8,revision:ops.revision,label,scope,count:targets.length};
+      const removed=status==='present'?0:targets.filter(p=>p.team_id).length;
+      $('#bulk-attendance-title').textContent=tier===null?'전체 출석 상태 변경':`${scope} 출석 상태 변경`;
+      $('#bulk-attendance-description').textContent=`검색·팀 필터와 관계없이 ${scope} ${targets.length}명을 ${label}으로 변경합니다. `+(removed?`대상 중 현재 팀에 배정된 ${removed}명의 팀 배정도 해제됩니다.`:status==='present'?'대상의 기존 팀 배정은 유지됩니다.':'대상의 팀 배정은 비워집니다.');
       $('#bulk-attendance-feedback').textContent='';
       $('#bulk-attendance-dialog').showModal();
     } catch(error){$('#directory-feedback').textContent=error.message;}
@@ -55,12 +62,12 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   async function applyBulkAttendance(event) {
     event.preventDefault();
     if(!backend.isAdmin||!connected||busy||!bulkAttendanceDraft)return;
-    const {revision,label,...payload}=bulkAttendanceDraft;
+    const {revision,label,scope,count,...payload}=bulkAttendanceDraft;
     busy=true;renderAuth();
     try {
       await backend.ops('save',payload,revision);
       $('#bulk-attendance-dialog').close();bulkAttendanceDraft=null;
-      $('#directory-feedback').textContent=`전체 ${payload.players.length}명을 ${label}으로 저장했습니다. 팀 편성에도 반영됩니다.`;
+      $('#directory-feedback').textContent=`${scope} ${count}명을 ${label}으로 저장했습니다. 팀 편성에도 반영됩니다.`;
     } catch(error){bulkAttendanceDraft=null;$('#bulk-attendance-feedback').textContent=error.message+' 창을 닫고 다시 시도해 주세요.';}
     finally{busy=false;await refresh();}
   }
@@ -96,6 +103,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
     const admin = backend.isAdmin;
     $('#bulk-attendance-controls').hidden=!admin;
     $$('[data-bulk-attendance]').forEach(el=>{el.disabled=!admin||!connected||busy||!attendanceData||!state.streamers.length;});
+    $$('[data-tier-attendance]').forEach(el=>{el.hidden=!admin;el.disabled=!admin||!connected||busy||!attendanceData;});
     $('#bulk-attendance-submit').disabled=!admin||!connected||busy||!bulkAttendanceDraft;
     $('#bulk-attendance-cancel').disabled=busy;
     if(!admin){$('#bulk-attendance-dialog').close();bulkAttendanceDraft=null;}
@@ -327,10 +335,10 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       const image = profile ? `<img class="streamer-avatar" src="${escapeHtml(profile)}" alt="${escapeHtml(record.name)} 프로필" loading="lazy" referrerpolicy="no-referrer">` : "";
       return `<article class="streamer-card" data-tier="${escapeHtml(record.tier || "")}"><div class="streamer-profile"><span class="avatar-fallback" aria-hidden="true">${escapeHtml([...record.name][0] || "☾")} </span>${image}</div><div class="streamer-info"><div class="streamer-title"><h2>${escapeHtml(record.name)}</h2>${record.tier ? `<span class="tier-badge">${escapeHtml(record.tier)}</span>` : ""}</div><p class="game-nickname">${escapeHtml(record.game_nickname || "닉네임 미등록")}</p></div><div class="streamer-card-actions">${record.game_nickname ? `<a class="record-search" href="https://dak.gg/er/players/${encodeURIComponent(record.game_nickname)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(record.name)} 게임 전적 검색">전적 검색 ↗</a>` : '<span class="record-unavailable">닉네임 등록 후 전적 검색</span>'}</div>${attendanceControls(record)}${backend.isAdmin ? `<div class="directory-actions"><button type="button" data-edit-streamer="${escapeHtml(record.id)}">프로필 수정</button><button type="button" data-remove-streamer="${escapeHtml(record.id)}">삭제</button></div>` : ""}</article>`;
     };
-    const group = (label, members) => members.length ? `<h2 class="streamer-divider">${escapeHtml(label)} · ${members.length}명</h2>${members.map(card).join("")}` : "";
+    const group = (label, members, tier=null) => members.length ? `<h2 class="streamer-divider">${escapeHtml(label)} · ${members.length}명</h2>${tier!==null&&backend.isAdmin?`<div class="tier-attendance-controls" role="group" aria-label="${escapeHtml(label)} 일괄 출석 상태">${[['pending','미확인'],['present','출석'],['absent','결석']].map(([value,text])=>`<button type="button" data-tier-attendance="${value}" data-attendance-tier="${escapeHtml(tier)}" ${busy||!connected||!attendanceData?'disabled':''}>${escapeHtml(tier||'미등록')} 전체 ${text}</button>`).join('')}</div>`:''}${members.map(card).join("")}` : "";
     $("#streamer-leaderboard-body").innerHTML = !filtered.length ? `<div class="streamer-empty">${records.length ? "검색 결과가 없습니다. 스트리머 이름이나 게임 닉네임을 확인해 주세요." : backend.isAdmin ? "등록된 스트리머가 없습니다. 스트리머 등록 버튼으로 명단을 추가해 주세요." : "아직 등록된 스트리머가 없습니다."}</div>`
       : $("#leaderboard-group").checked ? [...teams, {id:"",name:"미배정"}].map(team => group(team.name, filtered.filter(record => (record.team?.id ?? "") === team.id))).join("")
-      : mode === "tier" ? tierOrder.map(tier => group(tier ? tier + " TIER" : "티어 미등록", filtered.filter(record => (record.tier || "") === tier))).join("") : filtered.map(card).join("");
+      : mode === "tier" ? tierOrder.map(tier => group(tier ? tier + " TIER" : "티어 미등록", filtered.filter(record => (record.tier || "") === tier),tier)).join("") : filtered.map(card).join("");
     $$(".streamer-avatar").forEach(image => image.addEventListener("error", () => { image.hidden = true; }));
   }
 
@@ -535,6 +543,8 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       finally { busy = false; await refresh(); }
     });
     $("#streamer-leaderboard-body").addEventListener("click", async (event) => {
+      const tierAttendance=event.target.closest('[data-tier-attendance]');
+      if(tierAttendance){await openBulkAttendance(tierAttendance.dataset.tierAttendance,tierAttendance.dataset.attendanceTier);return;}
       const attendance=event.target.closest('[data-attendance-id]');
       if(attendance){await saveAttendance(attendance.dataset.attendanceId,attendance.dataset.attendance);return;}
       const edit = event.target.closest("[data-edit-streamer]");
