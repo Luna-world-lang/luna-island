@@ -1,4 +1,4 @@
-const tierOrder = ['SSS','SS','S','A','B','C','D','F','닭','나뭇가지'];
+const tierOrder = ['SSS','SS','S','A','B','C','D','E','닭','나뭇가지'];
 
 export function personalRecords(streamers, history) {
   const records = streamers.map(p => ({...p, games:0, wins:0, rankTotal:0}));

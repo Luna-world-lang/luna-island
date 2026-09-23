@@ -171,7 +171,7 @@
       <label>게임 닉네임<input id="registration-nickname" type="text" maxlength="60" autocomplete="off" placeholder="이터널 리턴 게임 닉네임"></label>
       <label>프로필 이미지 업로드<input id="registration-profile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="drawer-help">JPG · PNG · WEBP · GIF / 최대 5MB. 새 파일을 선택하지 않으면 기존 이미지를 유지합니다.</small></label>
       <img id="registration-preview" class="registration-preview" alt="프로필 이미지 미리보기" hidden>
-      <label>티어<select id="registration-tier"><option value="">미등록</option><option>SSS</option><option>SS</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option><option>닭</option><option>나뭇가지</option></select></label>
+      <label>티어<select id="registration-tier"><option value="">미등록</option><option>SSS</option><option>SS</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>닭</option><option>나뭇가지</option></select></label>
       <p class="drawer-help">이름·게임 닉네임·프로필·티어를 수정할 수 있습니다. 이름 변경 시 기존 경기·우승 기록의 참가 이름도 함께 반영되며 변경 전 상태는 백업됩니다.</p>
       <button class="primary-button" type="submit">저장</button>
       <p id="registration-feedback" class="form-feedback" role="status"></p>
@@ -187,7 +187,7 @@
       <p id="team-names-feedback" class="form-feedback" role="status"></p>
     </form>
   </dialog>
-  <script type="module" src="app.js?v=rename-27"></script>
+  <script type="module" src="app.js?v=cost-28"></script>
 <dialog id="history-dialog" aria-labelledby="history-title"><form id="history-form"><div class="drawer-header"><h2 id="history-title">기록 수정</h2><button id="close-history" class="icon-button" type="button" aria-label="기록 수정 닫기">×</button></div><p class="drawer-help">최종 순위·점수·킬·참가자를 수정합니다. 1위 팀이 우승팀으로 반영됩니다.</p><label>대회 날짜<input id="history-date" maxlength="80" required></label><div id="history-fields"></div><button class="primary-button" type="submit">수정 저장</button><p id="history-form-feedback" role="status"></p></form></dialog><dialog id="bulk-attendance-dialog" aria-labelledby="bulk-attendance-title"><form id="bulk-attendance-form"><h2 id="bulk-attendance-title">전체 출석 상태 변경</h2><p id="bulk-attendance-description"></p><p>티어와 코스트는 유지됩니다.</p><p id="bulk-attendance-feedback" class="form-feedback" role="status"></p><button type="button" id="bulk-attendance-cancel">취소</button> <button type="submit" id="bulk-attendance-submit" class="primary-button">전체 적용</button></form></dialog>
 </body>
 </html>

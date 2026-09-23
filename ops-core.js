@@ -1,5 +1,5 @@
-export const tiers = ['', 'SSS','SS','S','A','B','C','D','F','닭','나뭇가지'];
-export const tierCost = tier => ({SSS:10,SS:9,S:8,A:7,B:6,C:5,D:4,F:3,'닭':2,'나뭇가지':1}[tier] ?? 1);
+export const tiers = ['', 'SSS','SS','S','A','B','C','D','E','닭','나뭇가지'];
+export const tierCost = tier => ({SSS:8,SS:7,S:6,A:5,B:4,C:3,D:2,E:1,'닭':0,'나뭇가지':-1}[tier] ?? 1);
 export function balance(players, teamIds, capacity) {
   const attending = players.filter(p => p.attendance === 'present');
   if (!teamIds.length || attending.length > teamIds.length * capacity) throw Error('출석 인원에 맞게 팀 수 또는 팀당 정원을 늘려 주세요.');

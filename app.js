@@ -1,7 +1,7 @@
 import { backend } from "./supabase-service.js?v=rename-27";
-import { initAdminOps } from "./admin-ops.js?v=personal-23";
-import { tierCost } from "./ops-core.js?v=backup-14";
-import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=personal-23";
+import { initAdminOps } from "./admin-ops.js?v=cost-28";
+import { tierCost } from "./ops-core.js?v=cost-28";
+import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=cost-28";
 import { championPage, championLeaders } from "./champion-records.js?v=champions-24";
 (() => {
   "use strict";
@@ -326,7 +326,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   function renderLeaderboard(records = getIndividualRecords()) {
     const normalize = (text) => String(text ?? "").normalize("NFKC").toLocaleLowerCase("ko").replace(/\s/g, "");
     const query = normalize($("#leaderboard-search").value), teamId = $("#leaderboard-team").value;
-    const tierOrder = ["SSS", "SS", "S", "A", "B", "C", "D", "F", "닭", "나뭇가지", ""];
+    const tierOrder = ["SSS", "SS", "S", "A", "B", "C", "D", "E", "닭", "나뭇가지", ""];
     const mode = $("#leaderboard-sort").value || "tier";
     const sorted = [...records].sort((a,b) => mode === "name" ? a.name.localeCompare(b.name, "ko") : mode === "records" ? b.wins-a.wins || b.topThree-a.topThree || (a.averageRank ?? 99)-(b.averageRank ?? 99) || a.name.localeCompare(b.name, "ko") : tierOrder.indexOf(a.tier || "")-tierOrder.indexOf(b.tier || "") || a.name.localeCompare(b.name, "ko"));
     const filtered = sorted.map(record => ({...record, team: teams.find(team => team.id === record.team_id)})).filter(record => (normalize(record.name).includes(query) || normalize(record.game_nickname).includes(query)) && (!teamId || record.team?.id === teamId));
