@@ -79,13 +79,13 @@ export const backend = {
     const { error } = await client.rpc("luna_rename_teams", { p_names: names, p_revision: revision });
     if (error) throw new Error(error.message.includes("revision_conflict") ? "다른 화면에서 기록이 변경되었습니다. 창을 닫았다가 다시 열어 주세요." : "팀 이름을 저장하지 못했습니다. 중복 이름과 관리자 권한을 확인해 주세요.");
   },
-  async saveStreamer(id, name, teamId, profile = {}) {
+  async saveStreamer(id, name, teamId, profile = {}, revision = null) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
     const fields = { team_id: teamId || null, game_nickname: profile.gameNickname?.trim() || "", profile_url: profile.profileUrl?.trim() || "", tier: profile.tier || "" };
-    const query = id ? client.from("luna_streamers").update(fields).eq("id", id)
+    const query = id ? client.rpc('luna_update_streamer',{p_id:id,p_name:name.trim(),p_profile:fields,p_revision:revision})
       : client.from("luna_streamers").insert({ name: name.trim(), ...fields });
     const { error } = await query;
-    if (error) throw new Error(error.code === "23505" ? "이미 등록된 이름입니다." : "등록을 저장하지 못했습니다. 관리자 권한과 연결을 확인해 주세요.");
+    if (error) throw new Error(error.code === "23505" ? "이미 등록된 이름입니다." : error.message.includes('revision_conflict') ? '다른 화면에서 데이터가 변경되었습니다. 수정창을 닫았다가 다시 열어 주세요.' : error.message.includes('name_in_history') ? '해당 이름의 기존 경기 기록이 있어 사용할 수 없습니다. 다른 이름을 입력해 주세요.' : error.message.includes('streamer_missing') ? '삭제된 스트리머입니다. 명단을 새로고침해 주세요.' : "등록을 저장하지 못했습니다. 입력 내용과 관리자 연결을 확인해 주세요.");
   },
   async uploadProfile(file) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");

@@ -1,4 +1,4 @@
-import { backend } from "./supabase-service.js?v=lifecycle-22";
+import { backend } from "./supabase-service.js?v=rename-27";
 import { initAdminOps } from "./admin-ops.js?v=personal-23";
 import { tierCost } from "./ops-core.js?v=backup-14";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=personal-23";
@@ -25,6 +25,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
   let connected = false;
   let selectedPlayer = null;
   let editingStreamer = null;
+  let editingStreamerRevision = null;
   let editingEvent = null, historyRevision = null;
   let editingTeamsRevision = null;
   let teamOptionsSignature = "";
@@ -498,9 +499,10 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       if (!backend.isAdmin || !connected || busy) return;
       const streamer = state.streamers.find((streamer) => streamer.id === id);
       editingStreamer = streamer?.id ?? null;
+      editingStreamerRevision = state.revision;
       $("#registration-title").textContent = streamer ? "스트리머 프로필 수정" : "스트리머 등록";
       $("#registration-name").value = streamer?.name ?? "";
-      $("#registration-name").readOnly = !!streamer;
+      $("#registration-name").readOnly = false;
       $("#registration-nickname").value = streamer?.game_nickname ?? "";
       $("#registration-profile").value = "";
       $("#registration-preview").src = safeProfileUrl(streamer?.profile_url) || "";
@@ -536,7 +538,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
         const file = $("#registration-profile").files[0];
         $("#registration-feedback").textContent = file ? "이미지 업로드 중…" : "저장 중…";
         const profileUrl = file ? await backend.uploadProfile(file) : existing?.profile_url || "";
-        await backend.saveStreamer(editingStreamer, name, existing?.team_id || null, {gameNickname: $("#registration-nickname").value, profileUrl, tier: $("#registration-tier").value});
+        await backend.saveStreamer(editingStreamer, name, existing?.team_id || null, {gameNickname: $("#registration-nickname").value, profileUrl, tier: $("#registration-tier").value}, editingStreamerRevision);
         $("#registration-dialog").close();
         $("#directory-feedback").textContent = `${name} 명단을 저장했습니다.`;
       } catch (error) { $("#registration-feedback").textContent = error.message; }
