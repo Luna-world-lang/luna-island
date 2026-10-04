@@ -1,5 +1,5 @@
 import { backend } from "./supabase-service.js?v=rename-27";
-import { initAdminOps } from "./admin-ops.js?v=hide-absent-29";
+import { initAdminOps } from "./admin-ops.js?v=roster-30";
 import { tierCost } from "./ops-core.js?v=cost-28";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=cost-28";
 import { championPage, championLeaders } from "./champion-records.js?v=champions-24";

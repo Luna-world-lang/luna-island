@@ -400,3 +400,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .bulk-attendance-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0;padding:16px;border:1px solid #a78bfa40;border-radius:12px;background:#a78bfa0a}.bulk-attendance-controls[hidden]{display:none}.bulk-attendance-controls button{border:1px solid #a78bfa55;border-radius:8px;padding:9px 13px;background:#ffffff08;color:#e0d7fa;cursor:pointer}.bulk-attendance-controls button[data-bulk-attendance="present"]{border-color:#6ee7b770;color:#a5f3cf}.bulk-attendance-controls button[data-bulk-attendance="absent"]{border-color:#fda4af70;color:#fecdd3}.bulk-attendance-controls button:disabled{opacity:.4;cursor:default}.bulk-attendance-controls small{flex-basis:100%;color:#a8a6bb}#bulk-attendance-description{line-height:1.8}
 
 .tier-attendance-controls{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 12px}.tier-attendance-controls button{padding:8px 12px;border:1px solid #a78bfa55;border-radius:8px;background:#a78bfa12;color:#ddd1ff;cursor:pointer}.tier-attendance-controls button[data-tier-attendance="present"]{border-color:#6ee7b770;color:#a5f3cf}.tier-attendance-controls button[data-tier-attendance="absent"]{border-color:#fda4af70;color:#fecdd3}.tier-attendance-controls button:disabled{opacity:.4;cursor:default}
+
+/* Team formation: read-only cost groups and a single team control. */
+.ops-cost-group { margin-top:18px; }
+.ops-cost-group h4 { display:flex; align-items:center; justify-content:space-between; margin:0 0 8px; padding:7px 10px; border-left:3px solid #bfa1ff; border-radius:5px; background:#34294d; color:#ecdeff; font-size:14px; }
+.ops-cost-group h4 small { color:#bcb1cf; font-weight:400; }
+.ops-cost-group .ops-player-fields { grid-template-columns:1fr; }
+.ops-attendance { color:#b6afd0; font-size:12px; }
