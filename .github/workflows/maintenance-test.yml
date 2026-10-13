@@ -1,0 +1,50 @@
+name: Luna two-minute maintenance test
+on: workflow_dispatch
+permissions:
+  contents: read
+concurrency:
+  group: luna-server-maintenance
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pause and hold for two minutes
+        timeout-minutes: 10
+        run: |
+          node --input-type=module <<'JS'
+          const token=process.env.SUPABASE_ACCESS_TOKEN;
+          if(!token)throw Error('Management token missing');
+          const base='https://api.supabase.com/v1/projects/jwydeimcxnwpvzsgnwzp';
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          async function api(method='GET',path=''){
+            const r=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(method==='POST'?{body:'{}'}:{}),signal:AbortSignal.timeout(30000)});
+            if(!r.ok)throw Error('Management HTTP '+r.status);
+            const t=await r.text();return t?JSON.parse(t):{};
+          }
+          const before=await api();
+          if(before.status!=='ACTIVE_HEALTHY')throw Error('Test requires a healthy running project');
+          await api('POST','/pause');
+          console.log('Pause requested at',new Date().toISOString());
+          let paused=false;
+          for(let i=0;i<30;i++){
+            await sleep(10000);
+            if((await api()).status==='INACTIVE'){paused=true;break;}
+          }
+          if(!paused)throw Error('Pause confirmation timed out');
+          console.log('Pause confirmed; holding 120 seconds at',new Date().toISOString());
+          await sleep(120000);
+          console.log('Two-minute hold completed at',new Date().toISOString());
+          JS
+      - name: Always restore server and check data API
+        if: ${{ always() }}
+        timeout-minutes: 12
+        env:
+          RUN_MODE: restore
+        run: node server-schedule.mjs
