@@ -1,0 +1,31 @@
+name: Luna nightly maintenance
+on:
+  schedule:
+    # UTC 20:00 = 05:00 KST; UTC 21:00 = 06:00 KST.
+    # Retry until 08:45 KST. Late pause jobs are skipped.
+    - cron: '0,15,30,45 20-23 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = read-only token test; restore = emergency resume'
+        type: choice
+        options: [check, restore]
+        default: check
+permissions:
+  contents: read
+concurrency:
+  group: luna-server-maintenance
+  cancel-in-progress: false
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Manage scheduled maintenance
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RUN_MODE: ${{ github.event_name == 'schedule' && 'auto' || inputs.mode }}
+        run: node server-schedule.mjs
