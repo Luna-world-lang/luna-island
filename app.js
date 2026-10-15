@@ -1,6 +1,6 @@
 import { backend } from "./supabase-service.js?v=rename-27";
-import { initAdminOps } from "./admin-ops.js?v=roster-30";
-import { tierCost } from "./ops-core.js?v=cost-28";
+import { initAdminOps } from "./admin-ops.js?v=team-results-36";
+import { tierCost } from "./ops-core.js?v=team-results-36";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=cost-28";
 import { championPage, championLeaders } from "./champion-records.js?v=champions-24";
 (() => {
@@ -236,7 +236,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
     const standings = getStandings();
     const leaderPoints = standings[0]?.points ?? 0;
     const roundsEntered = new Set(state.scores.map((score) => score.round)).size;
-    $("#round-status").textContent = `입력된 라운드 ${roundsEntered} / 4`;
+    $("#round-status").textContent = `입력된 라운드 ${roundsEntered} / 3`;
 
     $("#top-three").innerHTML = standings.slice(0, 3).map((team, index) => `
       <article class="podium-card">

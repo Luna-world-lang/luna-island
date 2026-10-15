@@ -57,7 +57,7 @@ export function parseCSV(text) {
   return rows;
 }
 export function aggregate(rows, map, mode, streamers, teams, round, placementPoints, killPoint) {
-  if(!Number.isInteger(round)||round<1||round>4)throw Error('라운드는 1~4로 지정해 주세요.');
+  if(!Number.isInteger(round)||round<1||round>3)throw Error('라운드는 1~3으로 지정해 주세요.');
   if(!Number.isFinite(killPoint)||killPoint<0)throw Error('킬당 점수를 입력해 주세요.');
   if(new Set([map.name,map.rank,map.kills]).size!==3)throw Error('대상·순위·킬 열을 각각 다르게 선택해 주세요.');
   const seen=new Set(), grouped=new Map();
@@ -65,18 +65,18 @@ export function aggregate(rows, map, mode, streamers, teams, round, placementPoi
     const key=row[map.name]?.trim();
     if(!key||seen.has(key))throw Error(`중복되거나 비어 있는 대상: ${key || '(빈 값)'}`);
     seen.add(key);
-    const matches=mode==='player'?streamers.filter(p=>p.game_nickname===key):teams.filter(t=>t.name===key||t.id===key);
+    const matches=mode!=='team'?streamers.filter(p=>p.game_nickname===key):teams.filter(t=>t.name===key||t.id===key);
     if(matches.length!==1)throw Error(`대상을 하나로 연결할 수 없습니다: ${key}`);
-    const teamId=mode==='player'?matches[0].team_id:matches[0].id;
+    const teamId=mode!=='team'?matches[0].team_id:matches[0].id;
     if(!teamId)throw Error(`${key}: 저장된 참가 팀이 없습니다.`);
     const rank=Number(row[map.rank]),kills=Number(row[map.kills]);
     if(!row[map.rank]||!row[map.kills]||!Number.isInteger(rank)||rank<1||rank>8||!Number.isInteger(kills)||kills<0||kills>999999)throw Error(`${key}: 순위 또는 킬 값이 잘못되었습니다.`);
     const old=grouped.get(teamId);
     if(old&&old.placement!==rank)throw Error(`${key}: 같은 팀의 순위가 서로 다릅니다.`);
-    grouped.set(teamId,{teamId,round,placement:rank,kills:(old?.kills||0)+kills});
+    grouped.set(teamId,{teamId,round,placement:rank,kills:mode==='player-team'?Math.max(old?.kills??0,kills):(old?.kills||0)+kills});
   }
   const result=[...grouped.values()];
-  if(mode==='player') for(const r of result) {
+  if(mode!=='team') for(const r of result) {
     const missing=streamers.filter(p=>p.team_id===r.teamId && (!p.game_nickname || !seen.has(p.game_nickname)));
     if(missing.length)throw Error('같은 팀의 선수 결과가 누락되었습니다: '+missing.map(p=>p.name||p.game_nickname||p.id).join(', '));
   }

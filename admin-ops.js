@@ -1,5 +1,5 @@
-import {balance, tierCost, parseCSV, aggregate} from './ops-core.js?v=cost-28';
-import {renderSavedRounds} from './saved-rounds.js?v=lifecycle-22';
+import {balance, tierCost, parseCSV, aggregate} from './ops-core.js?v=team-results-36';
+import {renderSavedRounds} from './saved-rounds.js?v=team-results-36';
 export function initAdminOps(backend, refresh) {
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const button=document.createElement('button'); button.id='open-admin-ops'; button.className='admin-button';button.hidden=true;button.textContent='결과 집계 · 백업';
@@ -14,8 +14,8 @@ export function initAdminOps(backend, refresh) {
   <p class="drawer-help">티어별 기본 코스트는 SSS 8 → SS 7 → S 6 → A 5 → B 4 → C 3 → D 2 → E 1 → 닭 0 → 나뭇가지 -1입니다. 선수는 코스트가 높은 순으로 묶어 표시하며, 자동 분배는 인원수와 코스트 합계를 균형 있게 맞춥니다.</p><p id="ops-count"></p><div id="ops-board"></div></section>
   <section data-panel="import" hidden><h3>게임 ID로 결과 불러오기</h3><div class="ops-toolbar"><label>게임 ID<input id="ops-game-id" inputmode="numeric" maxlength="12" placeholder="예: 64894800"></label><button id="ops-game-lookup">경기 조회</button></div><p>게임 ID 조회에는 공식 API 키 등록이 필요합니다. 공식 경기 결과를 조회한 뒤 게임 속 팀과 루나섬 팀을 연결합니다. 등록된 게임 닉네임을 기준으로 팀을 제안하며, 저장 전 직접 확인할 수 있습니다.</p><div id="ops-game-teams"></div><button id="ops-game-apply" hidden>연결한 팀으로 집계 준비</button><hr><h3>또는 결과 파일 가져오기</h3><p>CSV/TSV 파일의 열을 연결해 미리보기한 뒤 저장합니다.</p>
   <label>결과 파일<input id="ops-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"></label><div id="ops-mapping" hidden>
-  <div class="ops-toolbar"><label>행 기준<select id="ops-mode"><option value="player">선수별 개인 킬</option><option value="team">팀별 팀 킬</option></select></label><label>닉네임 / 팀 이름 열<select id="ops-col-name"></select></label><label>순위 열<select id="ops-col-rank"></select></label><label>킬 열<select id="ops-col-kills"></select></label><label>라운드<input id="ops-round" type="number" min="1" max="4" value="1"></label><label>킬당 점수<input id="ops-kill-point" type="number" min="0" max="9999" value="1"></label></div>
-  <p>선수별 파일은 등록한 게임 닉네임과 정확히 일치해야 합니다. 같은 팀의 개인 킬을 합산합니다. 팀 킬이 선수마다 반복된 파일은 선수별 방식으로 넣지 마세요.</p><div class="ops-toolbar">${Array.from({length:8},(_,i)=>`<label>${i+1}위 점수<input data-placement="${i+1}" type="number" min="0" max="999999" placeholder="입력 필요"></label>`).join('')}</div>
+  <div class="ops-toolbar"><label>행 기준<select id="ops-mode"><option value="team">팀별 팀 킬 (팀당 한 행)</option><option value="player-team">선수별 행 · 팀 킬 중복 제거</option><option value="player">선수별 행 · 개인 킬 합산</option></select></label><label>닉네임 / 팀 이름 열<select id="ops-col-name"></select></label><label>순위 열<select id="ops-col-rank"></select></label><label>집계할 킬 열<select id="ops-col-kills"></select></label><label>라운드<input id="ops-round" type="number" min="1" max="3" value="1"></label><label>킬당 점수<input id="ops-kill-point" type="number" min="0" max="9999" value="1"></label></div>
+  <p>선수별 파일은 등록한 게임 닉네임과 정확히 일치해야 합니다. 같은 팀의 개인 킬을 합산합니다. 팀 킬이 선수마다 반복되면 ‘선수별 행 · 팀 킬 중복 제거’를 선택하세요. 같은 팀의 최댓값을 한 번만 반영합니다.</p><div class="ops-toolbar">${Array.from({length:8},(_,i)=>`<label>${i+1}위 점수<input data-placement="${i+1}" type="number" min="0" max="999999" placeholder="입력 필요"></label>`).join('')}</div>
   <button id="ops-preview">집계 미리보기</button></div><div id="ops-import-preview"></div><button id="ops-import-save" class="primary-button" hidden>확인한 결과 저장</button><p class="drawer-help">저장하면 해당 라운드 전체를 교체합니다. 저장 전에 자동 백업하며, 대회 결과 확정은 아래에서 진행합니다.</p></section>
   <section data-panel="backup" hidden><h3>기록을 안전하게 보관하세요</h3><p>현재 점수, 우승 기록, 스트리머 명단, 팀 이름, 출석·코스트·편성을 서버에 백업하고 JSON 파일로 내려받습니다. 프로필 사진은 주소만 포함됩니다.</p><button id="ops-backup" class="primary-button">현재 상태 백업 · 내려받기</button><p>복원하면 해당 시점의 전체 상태로 돌아갑니다. 복원 직전 상태도 자동 백업되어 되돌릴 수 있습니다. 보관 중인 백업은 최근 50개를 표시합니다. 삭제하면 휴지통으로 이동하며, 실제 경기 기록은 그대로 유지됩니다.</p><button id="ops-backup-reload">백업 목록 새로고침</button><div id="ops-backups"></div></section>`;
   document.body.append(dialog);
@@ -107,7 +107,7 @@ export function initAdminOps(backend, refresh) {
     $('#ops-game-teams').innerHTML=`<p>게임 ${esc(match.gameId)} · ${esc(match.startDtm)} · ${match.teams.length}팀</p>`+match.teams.map((t,i)=>{
       const linked=t.members.map(m=>{const found=data.streamers.filter(s=>s.game_nickname===m.nickname);return found.length===1?found[0].team_id:null;});
       const suggested=linked.length&&linked.every(id=>id&&id===linked[0])?linked[0]:'';
-      return `<article class="ops-backup-row"><span><strong>게임 팀 ${t.number} · ${t.rank}위 · ${t.kills}킬</strong><br>${t.members.map(m=>esc(m.nickname)+' ('+m.kills+'킬)').join(' · ')}</span><label>루나섬 팀 연결<select data-game-team="${i}"><option value="">팀을 선택하세요</option>${data.teams.map(team=>`<option value="${esc(team.id)}" ${suggested===team.id?'selected':''}>${esc(team.name)}</option>`).join('')}</select></label></article>`;
+      return `<article class="ops-backup-row"><span><strong>게임 팀 ${t.number} · ${t.rank}위 · ${t.kills}킬</strong><br>${t.members.map(m=>esc(m.nickname)).join(' · ')}</span><label>루나섬 팀 연결<select data-game-team="${i}"><option value="">팀을 선택하세요</option>${data.teams.map(team=>`<option value="${esc(team.id)}" ${suggested===team.id?'selected':''}>${esc(team.name)}</option>`).join('')}</select></label></article>`;
     }).join('');$('#ops-game-apply').hidden=false;say('게임 속 팀과 루나섬 팀 연결을 확인하세요.');
   });
   $('#ops-game-teams').onchange=()=>{sourceGameId=null;csv=null;clearPreview();$('#ops-mapping').hidden=true;};
@@ -126,6 +126,8 @@ export function initAdminOps(backend, refresh) {
     csv=parseCSV(await file.text());
     for(const id of ['name','rank','kills'])$('#ops-col-'+id).innerHTML=csv[0].map((c,i)=>`<option value="${i}">${esc(c)} (${i+1}열)</option>`).join('');
     for(const [id,rx,fallback] of [['name',/nickname|닉네임|team|팀|name/i,0],['rank',/rank|순위|placement/i,1],['kills',/kill|킬/i,2]]){const i=csv[0].findIndex(x=>rx.test(x));$('#ops-col-'+id).value=String(i<0?Math.min(fallback,csv[0].length-1):i);}
+    $('#ops-mode').value=csv[0].some(c=>/nickname|닉네임/i.test(c))?'player-team':'team';
+    const teamKills=csv[0].findIndex(c=>/team.?kill|팀.?킬/i.test(c));if(teamKills>=0)$('#ops-col-kills').value=String(teamKills);
     $('#ops-mapping').hidden=false;say(`${file.name} · ${csv.length-1}행. 열과 점수 규칙을 확인하세요.`);
   });
   $('#ops-preview').onclick=()=>{try{
@@ -133,7 +135,7 @@ export function initAdminOps(backend, refresh) {
     preview=aggregate(csv,{name:Number($('#ops-col-name').value),rank:Number($('#ops-col-rank').value),kills:Number($('#ops-col-kills').value)},$('#ops-mode').value,data.streamers,data.teams,Number($('#ops-round').value),Object.fromEntries($$('[data-placement]').map(e=>[e.dataset.placement,e.value])),$('#ops-kill-point').value===''?NaN:Number($('#ops-kill-point').value));
     preview=preview.map(r=>({...r,members:data.streamers.filter(p=>p.team_id===r.teamId).map(p=>p.name),rosterSource:'saved-team'}));
     if(sourceGameId){if(data.scores.some(s=>s.sourceGameId===sourceGameId&&s.round!==preview[0].round))throw Error('이 게임은 이미 다른 라운드에 집계되어 있습니다. 기존 점수를 확인하세요.');preview=preview.map(r=>{const selects=$$('[data-game-team]');const index=selects.find(s=>s.value===r.teamId)?.dataset.gameTeam;const members=match.teams[Number(index)].members.map(m=>{const registered=data.streamers.filter(p=>p.game_nickname===m.nickname);return registered.length===1?registered[0].name:m.nickname;});return {...r,sourceGameId,members,rosterSource:'official-game'};});}
-    $('#ops-import-preview').innerHTML=`${sourceGameId?'<p>게임 ID '+esc(sourceGameId)+'</p>':''}<div class="table-wrap"><table><thead><tr><th>라운드</th><th>팀</th><th>순위</th><th>킬</th><th>점수</th><th>처리</th></tr></thead><tbody>${preview.map(r=>`<tr><td>${r.round}R</td><td>${esc(data.teams.find(t=>t.id===r.teamId)?.name)}</td><td>${r.placement}</td><td>${r.kills}</td><td>${r.points}</td><td>${data.scores.some(s=>s.round===r.round&&s.teamId===r.teamId)?'기존 점수 교체':'새 점수'}</td></tr>`).join('')}</tbody></table></div>`;
+    $('#ops-import-preview').innerHTML=`${sourceGameId?'<p>게임 ID '+esc(sourceGameId)+'</p>':''}<div class="table-wrap"><table><thead><tr><th>라운드</th><th>팀</th><th>순위</th><th>팀 킬</th><th>점수</th><th>처리</th></tr></thead><tbody>${preview.map(r=>`<tr><td>${r.round}R</td><td>${esc(data.teams.find(t=>t.id===r.teamId)?.name)}</td><td>${r.placement}</td><td>${r.kills}</td><td>${r.points}</td><td>${data.scores.some(s=>s.round===r.round&&s.teamId===r.teamId)?'기존 점수 교체':'새 점수'}</td></tr>`).join('')}</tbody></table></div>`;
     $('#ops-import-preview').insertAdjacentHTML('beforeend','<h4>함께 보관할 경기 참가 명단</h4>'+preview.map(r=>'<p>'+esc(data.teams.find(t=>t.id===r.teamId)?.name)+' · '+(r.members.map(esc).join(' · ')||'명단 없음')+'</p>').join('')+'<p>게임 닉네임이 등록된 스트리머와 일치하면 스트리머 이름으로 보관합니다. 미등록 닉네임은 저장한 경기 수정에서 연결할 수 있습니다.</p>');
     $('#ops-import-save').hidden=false;say('집계 미리보기입니다. 저장할 팀·점수·참가 명단을 확인하세요.');
   }catch(e){preview=null;say(e.message);}};
