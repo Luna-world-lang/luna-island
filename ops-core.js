@@ -3,18 +3,23 @@ export const tierCost = tier => ({SSS:8,SS:7,S:6,A:5,B:4,C:3,D:2,E:1,'닭':0,'�
 export function balance(players, teamIds, capacity, random = Math.random) {
   const attending = players.filter(p => p.attendance === 'present');
   if (!teamIds.length || attending.length > teamIds.length * capacity) throw Error('출석 인원에 맞게 팀 수 또는 팀당 정원을 늘려 주세요.');
+  const isTop = p => ['SSS','SS','S'].includes(p.tier);
+  const topCount = attending.filter(isTop).length;
+  if (topCount > teamIds.length) throw Error(`SSS·SS·S 출석자가 ${topCount}명입니다. 서로 다른 팀에 배정하려면 팀을 ${topCount}개 이상 사용해야 합니다.`);
   const shuffle = values => {
     const result=[...values];
     for(let i=result.length-1;i>0;i--) {const j=Math.floor(random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
     return result;
   };
   let winner, bestScore=Infinity, ties=0;
-  // Retain the original result as a quality floor while exploring random compositions.
+  // Explore balanced candidates while keeping top-tier players on separate teams.
   for(let attempt=0;attempt<24;attempt++) {
   const bins = (attempt ? shuffle(teamIds) : teamIds).map(id => ({id, cost:0, players:[]}));
   const order = attempt ? shuffle(attending) : [...attending].sort((a,b)=>b.cost-a.cost || a.id.localeCompare(b.id));
+  // Seed top-tier players first so lower tiers cannot fill their available slots.
+  order.sort((a,b)=>Number(isTop(b))-Number(isTop(a)));
   for (const p of order) {
-    const bin = [...bins].filter(b=>b.players.length<capacity).sort((a,b)=>a.players.length-b.players.length || a.cost-b.cost || (attempt ? 0 : a.id.localeCompare(b.id)))[0];
+    const bin = [...bins].filter(b=>b.players.length<capacity && (!isTop(p)||!b.players.some(isTop))).sort((a,b)=>a.players.length-b.players.length || a.cost-b.cost || (attempt ? 0 : a.id.localeCompare(b.id)))[0];
     bin.players.push(p); bin.cost += p.cost;
   }
   // Improve cost balance without changing balanced team sizes.
@@ -22,6 +27,8 @@ export function balance(players, teamIds, capacity, random = Math.random) {
     let best=null, gain=0, equal=0;
     for(let i=0;i<bins.length;i++) for(let j=i+1;j<bins.length;j++)
       for(const a of bins[i].players) for(const b of bins[j].players) {
+        if (isTop(b) && bins[i].players.some(p=>p!==a && isTop(p))) continue;
+        if (isTop(a) && bins[j].players.some(p=>p!==b && isTop(p))) continue;
         const d=a.cost-b.cost, improvement=2*d*(bins[i].cost-bins[j].cost-d);
         if(improvement>gain+1e-8) {gain=improvement; best={i,j,a,b,d};equal=1;}
         else if(attempt && improvement>1e-8 && Math.abs(improvement-gain)<1e-8 && random()<1/++equal) best={i,j,a,b,d};
