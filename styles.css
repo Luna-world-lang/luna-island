@@ -417,3 +417,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .directory-page .record-search:focus-visible { outline:2px solid #d7beff; outline-offset:-3px; }
 .directory-page .streamer-card .directory-attendance,
 .directory-page .streamer-card .directory-actions { position:relative; z-index:2; pointer-events:auto; }
+
+/* Hover hint animates independently of the full-card link hit area. */
+.directory-page .streamer-card { padding-bottom:44px; }
+.directory-page .record-search::after { content:'전적 검색 ↗'; position:absolute; left:12px; right:12px; bottom:8px; color:#dbc7ff; font-size:12px; line-height:24px; text-align:center; opacity:0; transform:translateY(14px); transition:opacity .22s ease,transform .28s cubic-bezier(.22,1,.36,1); pointer-events:none; }
+.directory-page .streamer-card:hover .record-search::after,
+.directory-page .streamer-card:focus-within .record-search::after { opacity:1; transform:translateY(0); }
+@media (hover:none) { .directory-page .record-search::after { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { .directory-page .record-search::after { transition:none; transform:none; } }
