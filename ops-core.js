@@ -1,27 +1,43 @@
 export const tiers = ['', 'SSS','SS','S','A','B','C','D','E','닭','나뭇가지'];
 export const tierCost = tier => ({SSS:8,SS:7,S:6,A:5,B:4,C:3,D:2,E:1,'닭':0,'나뭇가지':-1}[tier] ?? 1);
-export function balance(players, teamIds, capacity) {
+export function balance(players, teamIds, capacity, random = Math.random) {
   const attending = players.filter(p => p.attendance === 'present');
   if (!teamIds.length || attending.length > teamIds.length * capacity) throw Error('출석 인원에 맞게 팀 수 또는 팀당 정원을 늘려 주세요.');
-  const bins = teamIds.map(id => ({id, cost:0, players:[]}));
-  for (const p of [...attending].sort((a,b)=>b.cost-a.cost || a.id.localeCompare(b.id))) {
-    const bin = [...bins].filter(b=>b.players.length<capacity).sort((a,b)=>a.players.length-b.players.length || a.cost-b.cost || a.id.localeCompare(b.id))[0];
+  const shuffle = values => {
+    const result=[...values];
+    for(let i=result.length-1;i>0;i--) {const j=Math.floor(random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
+    return result;
+  };
+  let winner, bestScore=Infinity, ties=0;
+  // Retain the original result as a quality floor while exploring random compositions.
+  for(let attempt=0;attempt<24;attempt++) {
+  const bins = (attempt ? shuffle(teamIds) : teamIds).map(id => ({id, cost:0, players:[]}));
+  const order = attempt ? shuffle(attending) : [...attending].sort((a,b)=>b.cost-a.cost || a.id.localeCompare(b.id));
+  for (const p of order) {
+    const bin = [...bins].filter(b=>b.players.length<capacity).sort((a,b)=>a.players.length-b.players.length || a.cost-b.cost || (attempt ? 0 : a.id.localeCompare(b.id)))[0];
     bin.players.push(p); bin.cost += p.cost;
   }
   // Improve cost balance without changing balanced team sizes.
   for(let pass=0;pass<100;pass++) {
-    let best=null, gain=0;
+    let best=null, gain=0, equal=0;
     for(let i=0;i<bins.length;i++) for(let j=i+1;j<bins.length;j++)
       for(const a of bins[i].players) for(const b of bins[j].players) {
         const d=a.cost-b.cost, improvement=2*d*(bins[i].cost-bins[j].cost-d);
-        if(improvement>gain+1e-8) {gain=improvement; best={i,j,a,b,d};}
+        if(improvement>gain+1e-8) {gain=improvement; best={i,j,a,b,d};equal=1;}
+        else if(attempt && improvement>1e-8 && Math.abs(improvement-gain)<1e-8 && random()<1/++equal) best={i,j,a,b,d};
       }
     if(!best) break;
     const {i,j,a,b,d}=best;
     bins[i].players[bins[i].players.indexOf(a)]=b; bins[j].players[bins[j].players.indexOf(b)]=a;
     bins[i].cost-=d; bins[j].cost+=d;
   }
-  return players.map(p=>({...p,team:bins.find(b=>b.players.some(x=>x.id===p.id))?.id || ''}));
+  const score=bins.reduce((sum,b)=>sum+b.cost*b.cost,0);
+  if(score<bestScore-1e-8) {winner=bins;bestScore=score;ties=1;}
+  else if(Math.abs(score-bestScore)<1e-8 && random()<1/++ties) winner=bins;
+  }
+  const assignments=new Map(), labels=shuffle(teamIds);
+  winner.forEach((bin,i)=>bin.players.forEach(p=>assignments.set(p.id,labels[i])));
+  return players.map(p=>({...p,team:assignments.get(p.id)||''}));
 }
 export function parseCSV(text) {
   text=text.replace(/^\uFEFF/,'');
