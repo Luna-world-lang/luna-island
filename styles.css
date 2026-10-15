@@ -408,17 +408,12 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .ops-cost-group .ops-player-fields { grid-template-columns:1fr; }
 .ops-attendance { color:#b6afd0; font-size:12px; }
 
-/* Reveal match history from the bottom of each profile card. */
-.directory-page .streamer-card { overflow:hidden; }
-.directory-page .streamer-card-actions { pointer-events:none; }
-.directory-page .record-search { inset:auto 12px 7px; min-height:28px; padding:5px 12px; align-items:center; border-radius:8px; color:#eadcff; background:linear-gradient(135deg,#554078,#302742); opacity:1; transform:translateY(0); pointer-events:auto; transition:transform .28s cubic-bezier(.22,1,.36,1),opacity .22s ease,background .22s ease; }
-.directory-page .record-search:hover,.directory-page .record-search:focus-visible { background:linear-gradient(135deg,#70559a,#44345f); border-radius:8px; }
-.directory-page .record-search:focus-visible { outline:2px solid #d7beff; outline-offset:2px; }
-@media (hover:hover) and (pointer:fine) {
-  .directory-page .streamer-card .record-search { opacity:0; transform:translateY(18px); pointer-events:none; }
-  .directory-page .streamer-card:hover .record-search,
-  .directory-page .streamer-card:focus-within .record-search { opacity:1; transform:translateY(0); pointer-events:auto; }
-}
-@media (prefers-reduced-motion:reduce) {
-  .directory-page .streamer-card .record-search { transition:none; transform:none; }
-}
+/* Full-card match history link; admin controls remain above its hit area. */
+.directory-page .streamer-card { overflow:hidden; padding-bottom:22px; }
+.directory-page .streamer-card-actions { pointer-events:none; z-index:1; padding:0; }
+.directory-page .record-search,
+.directory-page .record-search:hover,
+.directory-page .record-search:focus-visible { inset:0; padding:0; font-size:0; color:transparent; background:none; opacity:1; transform:none; border-radius:12px; pointer-events:auto; cursor:pointer; }
+.directory-page .record-search:focus-visible { outline:2px solid #d7beff; outline-offset:-3px; }
+.directory-page .streamer-card .directory-attendance,
+.directory-page .streamer-card .directory-actions { position:relative; z-index:2; pointer-events:auto; }
