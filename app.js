@@ -1,6 +1,6 @@
 import { backend } from "./supabase-service.js?v=rename-27";
-import { initAdminOps } from "./admin-ops.js?v=team-results-36";
-import { tierCost } from "./ops-core.js?v=team-results-36";
+import { initAdminOps } from "./admin-ops.js?v=cost-38";
+import { tierCost } from "./ops-core.js?v=cost-38";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=cost-28";
 import { championPage, championLeaders } from "./champion-records.js?v=champions-24";
 (() => {
@@ -48,7 +48,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
       const scope=tier===null?'전체':tier?`${tier} 티어`:'티어 미등록';
       const players=current.streamers.map(p=>{
         const old=ops.data.players?.find(x=>x.id===p.id), selected=tier===null||(p.tier||'')===tier;
-        return {id:p.id,tier:p.tier||'',cost:old?.cost??tierCost(p.tier),attendance:selected?status:(old?.attendance||(p.team_id?'present':'pending')),team:selected&&status!=='present'?'':(p.team_id||'')};
+        return {id:p.id,tier:p.tier||'',cost:tierCost(p.tier),attendance:selected?status:(old?.attendance||(p.team_id?'present':'pending')),team:selected&&status!=='present'?'':(p.team_id||'')};
       });
       bulkAttendanceDraft={players,capacity:ops.data.capacity||3,teamCount:ops.data.teamCount||8,revision:ops.revision,label,scope,count:targets.length};
       const removed=status==='present'?0:targets.filter(p=>p.team_id).length;
