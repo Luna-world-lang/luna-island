@@ -1,6 +1,6 @@
 import { backend } from "./supabase-service.js?v=rename-27";
-import { initAdminOps } from "./admin-ops.js?v=cost-38";
-import { tierCost } from "./ops-core.js?v=cost-38";
+import { initAdminOps } from "./admin-ops.js?v=half-39";
+import { tierCost } from "./ops-core.js?v=half-39";
 import { personalRecords, sortPersonalRecords } from "./personal-records.js?v=cost-28";
 import { championPage, championLeaders } from "./champion-records.js?v=champions-24";
 (() => {
@@ -454,7 +454,7 @@ import { championPage, championLeaders } from "./champion-records.js?v=champions
         editingEvent = structuredClone(record); historyRevision = state.revision;
         $("#history-title").textContent = '제 ' + number + '회 기록 수정';
         $("#history-date").value = record.date;
-        $("#history-fields").innerHTML = record.standings.map((team,i) => `<fieldset data-history-row="${i}"><legend>${escapeHtml(team.name)}</legend><label>팀 이름<input data-field="name" value="${escapeHtml(team.name)}" maxlength="40" required></label><label>참가자 (쉼표로 구분)<input data-field="members" value="${escapeHtml(team.members.join(', '))}"></label><div class="form-row three"><label>최종 순위<input data-field="rank" type="number" min="1" max="${record.standings.length}" value="${team.rank}" required></label><label>팀 점수<input data-field="points" type="number" min="0" max="999999" value="${team.points}" required></label><label>팀 킬<input data-field="kills" type="number" min="0" max="999999" value="${team.kills}" required></label></div></fieldset>`).join("");
+        $("#history-fields").innerHTML = record.standings.map((team,i) => `<fieldset data-history-row="${i}"><legend>${escapeHtml(team.name)}</legend><label>팀 이름<input data-field="name" value="${escapeHtml(team.name)}" maxlength="40" required></label><label>참가자 (쉼표로 구분)<input data-field="members" value="${escapeHtml(team.members.join(', '))}"></label><div class="form-row three"><label>최종 순위<input data-field="rank" type="number" min="1" max="${record.standings.length}" value="${team.rank}" required></label><label>팀 점수<input data-field="points" type="number" step="0.5" min="0" max="999999" value="${team.points}" required></label><label>팀 킬<input data-field="kills" type="number" min="0" max="999999" value="${team.kills}" required></label></div></fieldset>`).join("");
         $("#history-form-feedback").textContent = ""; $("#history-dialog").showModal(); return;
       }
       if (action === "delete" && !confirm('제 ' + number + '회 기록을 삭제할까요? 우승·개인 기록 집계에서 제외되며 삭제한 기록에서 복구할 수 있습니다.')) return;

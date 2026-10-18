@@ -65,7 +65,7 @@ export function parseCSV(text) {
 }
 export function aggregate(rows, map, mode, streamers, teams, round, placementPoints, killPoint) {
   if(!Number.isInteger(round)||round<1||round>3)throw Error('라운드는 1~3으로 지정해 주세요.');
-  if(!Number.isFinite(killPoint)||killPoint<0)throw Error('킬당 점수를 입력해 주세요.');
+  if(!Number.isFinite(killPoint)||killPoint<0||!Number.isInteger(killPoint*2))throw Error('킬당 점수는 0 이상의 0.5점 단위로 입력해 주세요.');
   if(new Set([map.name,map.rank,map.kills]).size!==3)throw Error('대상·순위·킬 열을 각각 다르게 선택해 주세요.');
   const seen=new Set(), grouped=new Map();
   for(const row of rows.slice(1)) {
@@ -90,9 +90,9 @@ export function aggregate(rows, map, mode, streamers, teams, round, placementPoi
   if(new Set(result.map(r=>r.placement)).size!==result.length)throw Error('팀 순위가 중복되었습니다.');
   return result.map(r=>{
     const base=placementPoints[r.placement];
-    if(base===''||base==null||!Number.isFinite(Number(base))||Number(base)<0)throw Error(`${r.placement}위의 순위 점수를 입력해 주세요.`);
+    if(base===''||base==null||!Number.isFinite(Number(base))||Number(base)<0||!Number.isInteger(Number(base)*2))throw Error(`${r.placement}위의 순위 점수를 0 이상의 0.5점 단위로 입력해 주세요.`);
     const points=Number(base)+r.kills*killPoint;
-    if(!Number.isInteger(points)||points>999999||r.kills>999999)throw Error('합계 점수·킬은 999999 이하의 정수여야 합니다.');
+    if(!Number.isInteger(points*2)||points>999999||r.kills>999999)throw Error('합계 점수는 999999 이하의 0.5점 단위, 킬은 정수여야 합니다.');
     return {...r,points,updatedAt:new Date().toISOString()};
   });
 }
