@@ -42,7 +42,7 @@ export const backend = {
     ]);
     if (dashboard.error || directory.error || teamNames.error) throw new Error("경기 기록과 명단을 불러오지 못했습니다.");
     const data = dashboard.data;
-    return { scores: data.scores, history: data.history.filter(event => !event.deleted), trash: data.history.filter(event => event.deleted), eventNumber: data.event_number, revision: data.revision, streamers: directory.data, teams: teamNames.data };
+    return { scores: data.scores, history: data.history.filter(event => !event.deleted), trash: data.history.filter(event => event.deleted), eventNumber: data.event_number, revision: data.revision, streamers: directory.data.map(p => ({...p,tier:['E','닭','나뭇가지'].includes(p.tier)?'D':p.tier})), teams: teamNames.data };
   },
   async manageHistory(action, number, event, revision) {
     if (!this.isAdmin) throw new Error("관리자 로그인이 필요합니다.");
